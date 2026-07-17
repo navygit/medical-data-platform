@@ -2,7 +2,7 @@
 
 **Production-style data infrastructure for 3D medical multimodal datasets — ingestion, quality control, governance, versioning and lineage.**
 
-[![CI](https://github.com/USERNAME/medical-data-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/USERNAME/medical-data-platform/actions/workflows/ci.yml)
+[![CI](https://github.com/navygit/medical-data-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/navygit/medical-data-platform/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
 [![Tests](https://img.shields.io/badge/tests-129%20passing-brightgreen)](tests/)
 [![Coverage](https://img.shields.io/badge/coverage-91%25-brightgreen)](tests/)
@@ -83,7 +83,7 @@ Raw  →  Ingest  →  QC  →  Preprocess  →  Split  →  Release
 Requires Python 3.11 or 3.12. (Not 3.13/3.14 — MONAI has no wheels there yet.)
 
 ```bash
-git clone https://github.com/USERNAME/medical-data-platform.git
+git clone https://github.com/navygit/medical-data-platform.git
 cd medical-data-platform
 
 python -m venv .venv
