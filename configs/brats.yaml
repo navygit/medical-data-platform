@@ -1,0 +1,54 @@
+# Case study 1 -- BraTS brain tumour segmentation pipeline.
+#
+# Cohort schema: multi-parametric brain MRI (T1, T1Gd, T2, FLAIR) with expert
+# segmentation of tumour sub-regions. All four modalities are required: the
+# baseline 3D U-Net stacks them as input channels, so a subject missing FLAIR
+# cannot form a valid training sample and is excluded at QC rather than
+# silently zero-filled.
+name: brats
+seed: 42
+
+paths:
+  raw: data/raw/brats
+  interim: data/interim/brats
+  processed: data/processed/brats
+  outputs: outputs/brats
+  releases: releases/brats
+
+qc:
+  min_tumor_voxels: 10
+  expected_modalities: [t1, t1ce, t2, flair]
+  expected_orientation: RAS
+  max_spacing_mm: 5.0
+  min_shape: [16, 16, 16]
+  fail_on: error
+
+preprocess:
+  target_spacing: [1.0, 1.0, 1.0]   # isotropic; BraTS ships 1 mm already
+  target_orientation: RAS
+  intensity_norm: zscore            # MRI intensity is uncalibrated -> per-volume z-score
+  clip_percentiles: [0.5, 99.5]
+
+split:
+  train: 0.7
+  val: 0.15
+  test: 0.15
+  seed: 42
+  stratify_by: tumor_volume_mm3     # tertiles, so burden is balanced across splits
+  group_by: patient_id
+
+train:
+  epochs: 2                         # smoke-test default; raise for a real run
+  batch_size: 2
+  lr: 0.001
+  roi_size: [32, 32, 32]
+  num_workers: 0
+  device: auto
+  experiment: brats-unet3d
+
+extra:
+  dataset_version: v1.0.0
+  label_map:
+    1: necrotic_and_non_enhancing_core
+    2: peritumoral_edema
+    4: enhancing_tumor
