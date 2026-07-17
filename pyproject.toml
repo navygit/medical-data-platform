@@ -1,0 +1,117 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "medical-data-platform"
+version = "0.1.0"
+description = "Production-style data platform for 3D medical multimodal datasets: ingestion, QC, governance and versioning."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Navin Kumar" }]
+keywords = ["medical-imaging", "dicom", "nifti", "data-engineering", "mlops", "data-governance"]
+classifiers = [
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+]
+
+# Core: everything needed to run ingestion, QC, governance and versioning end to
+# end. Kept deliberately light so `pip install -e .` works on any machine and CI
+# stays fast. Deep-learning extras live under [project.optional-dependencies].
+dependencies = [
+    "numpy>=1.26",
+    "pandas>=2.1",
+    "pyarrow>=14.0",
+    "pydantic>=2.5",
+    "pyyaml>=6.0",
+    "nibabel>=5.2",
+    "pydicom>=2.4",
+    "matplotlib>=3.8",
+    "plotly>=5.18",
+    "scikit-learn>=1.4",
+    "jinja2>=3.1",
+]
+
+[project.optional-dependencies]
+# Heavy DL stack. Separate because a reviewer reading the governance code should
+# not have to download 2 GB of CUDA wheels to run the QC pipeline.
+ml = [
+    "torch>=2.2",
+    "monai>=1.3",
+    "torchio>=0.19",
+    "SimpleITK>=2.3",
+    "transformers>=4.38",
+    "mlflow>=2.10",
+]
+# Orchestration and dataset versioning for a real deployment.
+orchestration = [
+    "prefect>=2.16",
+    "dvc>=3.48",
+    "hydra-core>=1.3",
+]
+# Interactive governance dashboard (case study 3).
+dashboard = [
+    "dash>=2.16",
+    "polars>=0.20",
+]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=4.1",
+    "ruff>=0.3",
+    "black>=24.2",
+    "mypy>=1.9",
+    "pre-commit>=3.6",
+]
+
+[project.scripts]
+mdp-synth = "scripts.generate_synthetic_data:main"
+
+[tool.setuptools]
+# Explicit package list. Auto-discovery would sweep in `data/` and `outputs/`.
+packages = [
+    "common",
+    "scripts",
+    "pipelines",
+    "pipelines.brats",
+    "pipelines.mimic",
+    "pipelines.lits",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM", "ARG", "PTH", "RUF"]
+ignore = [
+    "E501",    # line length is enforced by the formatter, not the linter
+    "B008",    # FastAPI/typer-style defaults are intentional
+    "RUF012",  # ClassVar annotations add noise to pydantic models
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ARG001", "ARG002"]          # pytest fixtures are "unused" arguments
+"scripts/*" = ["C4"]
+# QC checks share one signature `(record, config)` because the registry calls them
+# uniformly. Some checks don't need the config; that's the contract, not a defect.
+"common/qc.py" = ["ARG001"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+markers = [
+    "slow: deselect with -m 'not slow'",
+    "ml: requires the optional [ml] extra (torch/monai)",
+]
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_unused_ignores = true
+ignore_missing_imports = true

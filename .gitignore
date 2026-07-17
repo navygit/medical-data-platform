@@ -1,0 +1,51 @@
+# Data and artifacts are never committed. They are reproducible from the
+# pipelines, and medical data must not land in git history even when synthetic --
+# the habit is what matters, and git history is effectively permanent.
+data/
+outputs/
+releases/
+mlruns/
+*.nii
+*.nii.gz
+*.dcm
+*.parquet
+
+# DVC tracks data pointers; the .dvc metafiles themselves ARE committed.
+/data.dvc
+.dvc/cache
+.dvc/tmp
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.eggs/
+
+# Environments
+.venv/
+venv/
+env/
+.python-version
+
+# Testing / typing / linting caches
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+
+# IDE / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Jupyter
+.ipynb_checkpoints/
