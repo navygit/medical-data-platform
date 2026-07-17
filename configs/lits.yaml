@@ -1,0 +1,42 @@
+# Case study 3 -- LiTS liver CT: data governance, quality and bias.
+#
+# This pipeline deliberately trains no model. The deliverable is the governance
+# artifact set: a defensible cohort with an attrition trail, a graded quality
+# score per study, a statistically-tested bias audit, and a generated dataset
+# card. That is the Data Manager's actual product.
+name: lits
+seed: 42
+
+paths:
+  raw: data/raw/lits
+  interim: data/interim/lits
+  processed: data/processed/lits
+  outputs: outputs/lits
+  releases: releases/lits
+
+qc:
+  min_tumor_voxels: 10
+  expected_modalities: [ct]
+  expected_orientation: RAS
+  max_spacing_mm: 5.0
+  min_shape: [16, 16, 16]
+  fail_on: warn        # governance reports on problems rather than halting
+
+preprocess:
+  target_spacing: [1.0, 1.0, 1.0]
+  target_orientation: RAS
+  intensity_norm: none  # CT is calibrated in HU; z-scoring would destroy that
+
+split:
+  train: 0.7
+  val: 0.15
+  test: 0.15
+  seed: 42
+  group_by: patient_id
+
+extra:
+  dataset_version: v1.0.0
+  cohort: adult_contrast_liver_ct   # see pipelines/lits/cohort_builder.PRESETS
+  quality_threshold: 65             # grade C; overridable per use case
+  hu_window: [-100, 400]            # abdominal soft-tissue window
+  reference_population: us_general
