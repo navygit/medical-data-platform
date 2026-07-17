@@ -1,0 +1,45 @@
+# Base configuration inherited by every pipeline.
+# Pipeline-specific files under configs/ override these keys; CLI --set overrides win last.
+name: base
+seed: 42
+log_level: INFO
+json_logs: false
+
+paths:
+  raw: data/raw
+  interim: data/interim
+  processed: data/processed
+  outputs: outputs
+  releases: releases
+
+qc:
+  min_tumor_voxels: 10
+  expected_modalities: []
+  expected_orientation: RAS
+  max_spacing_mm: 5.0
+  min_shape: [16, 16, 16]
+  fail_on: error
+
+preprocess:
+  target_spacing: [1.0, 1.0, 1.0]
+  target_orientation: RAS
+  intensity_norm: zscore
+  clip_percentiles: [0.5, 99.5]
+
+split:
+  train: 0.7
+  val: 0.15
+  test: 0.15
+  seed: 42
+  stratify_by: null
+  group_by: patient_id   # never let one patient straddle two splits
+
+train:
+  epochs: 2
+  batch_size: 2
+  lr: 0.001
+  roi_size: [64, 64, 64]
+  num_workers: 0
+  device: auto
+  mlflow_uri: null
+  experiment: default
