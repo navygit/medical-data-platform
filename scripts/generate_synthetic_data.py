@@ -69,9 +69,7 @@ def _rng(seed: int) -> np.random.Generator:
 
 def _brain_phantom(shape: tuple[int, int, int], rng: np.random.Generator) -> np.ndarray:
     """A crude head-shaped intensity volume: ellipsoid brain plus noise."""
-    zz, yy, xx = np.meshgrid(
-        *[np.linspace(-1, 1, s) for s in shape], indexing="ij"
-    )
+    zz, yy, xx = np.meshgrid(*[np.linspace(-1, 1, s) for s in shape], indexing="ij")
     radius = (xx / 0.75) ** 2 + (yy / 0.9) ** 2 + (zz / 0.85) ** 2
     brain = np.clip(1.0 - radius, 0, 1)
     tissue = brain * (0.6 + 0.4 * np.sin(6 * xx) * np.cos(5 * yy))
@@ -90,13 +88,11 @@ def _tumor_mask(
 
     centre = np.array([rng.uniform(0.3, 0.7) * s for s in shape])
     zz, yy, xx = np.meshgrid(*[np.arange(s) for s in shape], indexing="ij")
-    dist = np.sqrt(
-        (zz - centre[0]) ** 2 + (yy - centre[1]) ** 2 + (xx - centre[2]) ** 2
-    )
+    dist = np.sqrt((zz - centre[0]) ** 2 + (yy - centre[1]) ** 2 + (xx - centre[2]) ** 2)
     outer = rng.uniform(0.14, 0.26) * min(shape)
-    mask[dist < outer] = 2          # peritumoral edema
-    mask[dist < outer * 0.62] = 4   # enhancing tumor
-    mask[dist < outer * 0.30] = 1   # necrotic core
+    mask[dist < outer] = 2  # peritumoral edema
+    mask[dist < outer * 0.62] = 4  # enhancing tumor
+    mask[dist < outer * 0.30] = 1  # necrotic core
     return mask
 
 
@@ -216,7 +212,7 @@ def generate_lits(root: Path, n_subjects: int, shape: tuple[int, int, int], seed
         spacing = (float(rng.choice([1.0, 2.5, 5.0])), 0.8, 0.8)
 
         body = _brain_phantom(shape, rng) / 400.0
-        ct = (body * 120 - 60).astype(np.float32)          # soft tissue ~ -60..60 HU
+        ct = (body * 120 - 60).astype(np.float32)  # soft tissue ~ -60..60 HU
         liver = (body > 0.55).astype(np.uint8)
         ct[liver > 0] = rng.normal(105, 8, int(liver.sum()))  # contrast-enhanced liver
 
@@ -234,16 +230,18 @@ def generate_lits(root: Path, n_subjects: int, shape: tuple[int, int, int], seed
         if i == DEFECT_PLAN["corrupt"]:
             _corrupt(vol_path)
 
-        rows.append({
-            "patient_id": f"lits-{i:04d}",
-            "age": round(age, 1),
-            "sex": sex,
-            "institution": institution,
-            "scanner": SCANNERS[rng.integers(0, len(SCANNERS))],
-            "contrast": bool(rng.random() < 0.75),
-            "volume_path": f"volumes/volume-{i}.nii.gz",
-            "label_path": f"labels/segmentation-{i}.nii.gz",
-        })
+        rows.append(
+            {
+                "patient_id": f"lits-{i:04d}",
+                "age": round(age, 1),
+                "sex": sex,
+                "institution": institution,
+                "scanner": SCANNERS[rng.integers(0, len(SCANNERS))],
+                "contrast": bool(rng.random() < 0.75),
+                "volume_path": f"volumes/volume-{i}.nii.gz",
+                "label_path": f"labels/segmentation-{i}.nii.gz",
+            }
+        )
 
     pd.DataFrame(rows).to_csv(root / "clinical_metadata.csv", index=False)
     log.info("synth.lits.done", extra={"root": str(root), "n_files": written})
@@ -255,27 +253,43 @@ def generate_lits(root: Path, n_subjects: int, shape: tuple[int, int, int], seed
 # --------------------------------------------------------------------------- #
 
 _REPORT_TEMPLATES = [
-    ("FINDINGS: The lungs are clear bilaterally. The cardiomediastinal silhouette "
-     "is within normal limits. No pleural effusion or pneumothorax.\n"
-     "IMPRESSION: No acute cardiopulmonary abnormality.", []),
-    ("FINDINGS: Patchy airspace opacity in the right lower lobe measuring "
-     "approximately 3.2 cm. No pleural effusion.\n"
-     "IMPRESSION: Findings compatible with pneumonia. Recommend follow-up "
-     "radiograph in 6 weeks.", ["pneumonia"]),
-    ("FINDINGS: Enlargement of the cardiac silhouette. Mild pulmonary vascular "
-     "congestion with interstitial edema.\n"
-     "IMPRESSION: Cardiomegaly with mild pulmonary edema.", ["cardiomegaly", "edema"]),
-    ("FINDINGS: Moderate left pleural effusion with associated basilar "
-     "atelectasis. Heart size is normal.\n"
-     "IMPRESSION: Moderate left pleural effusion. Consider thoracentesis.",
-     ["pleural_effusion"]),
-    ("FINDINGS: There is no evidence of consolidation. No focal opacity. "
-     "Cardiac silhouette is enlarged, measuring 16.1 cm.\n"
-     "IMPRESSION: Cardiomegaly without acute process.", ["cardiomegaly"]),
-    ("FINDINGS: Bilateral perihilar opacities with Kerley B lines. Small "
-     "bilateral pleural effusions.\n"
-     "IMPRESSION: Pulmonary edema, likely cardiogenic. Effusions noted.",
-     ["edema", "pleural_effusion"]),
+    (
+        "FINDINGS: The lungs are clear bilaterally. The cardiomediastinal silhouette "
+        "is within normal limits. No pleural effusion or pneumothorax.\n"
+        "IMPRESSION: No acute cardiopulmonary abnormality.",
+        [],
+    ),
+    (
+        "FINDINGS: Patchy airspace opacity in the right lower lobe measuring "
+        "approximately 3.2 cm. No pleural effusion.\n"
+        "IMPRESSION: Findings compatible with pneumonia. Recommend follow-up "
+        "radiograph in 6 weeks.",
+        ["pneumonia"],
+    ),
+    (
+        "FINDINGS: Enlargement of the cardiac silhouette. Mild pulmonary vascular "
+        "congestion with interstitial edema.\n"
+        "IMPRESSION: Cardiomegaly with mild pulmonary edema.",
+        ["cardiomegaly", "edema"],
+    ),
+    (
+        "FINDINGS: Moderate left pleural effusion with associated basilar "
+        "atelectasis. Heart size is normal.\n"
+        "IMPRESSION: Moderate left pleural effusion. Consider thoracentesis.",
+        ["pleural_effusion"],
+    ),
+    (
+        "FINDINGS: There is no evidence of consolidation. No focal opacity. "
+        "Cardiac silhouette is enlarged, measuring 16.1 cm.\n"
+        "IMPRESSION: Cardiomegaly without acute process.",
+        ["cardiomegaly"],
+    ),
+    (
+        "FINDINGS: Bilateral perihilar opacities with Kerley B lines. Small "
+        "bilateral pleural effusions.\n"
+        "IMPRESSION: Pulmonary edema, likely cardiogenic. Effusions noted.",
+        ["edema", "pleural_effusion"],
+    ),
 ]
 
 
@@ -288,8 +302,8 @@ def _chest_phantom(size: int, rng: np.random.Generator, opacity: bool) -> np.nda
         ((xx + 0.42) / 0.30) ** 2 + ((yy + 0.05) / 0.55) ** 2 < 1
     )
     image[lungs] = 400.0
-    image[np.abs(xx) < 0.12] = 2200.0                       # mediastinum
-    image += 180 * np.sin(yy * 40)                          # ribs
+    image[np.abs(xx) < 0.12] = 2200.0  # mediastinum
+    image += 180 * np.sin(yy * 40)  # ribs
     if opacity:
         blob = ((xx - 0.45) ** 2 + (yy + 0.35) ** 2) < 0.02
         image[blob] += 900.0
@@ -326,8 +340,7 @@ def generate_mimic(root: Path, n_studies: int, size: int, seed: int) -> int:
         meta.TransferSyntaxUID = ExplicitVRLittleEndian
         meta.ImplementationClassUID = generate_uid()
 
-        ds = FileDataset(str(subject_dir / "image.dcm"), {},
-                         file_meta=meta, preamble=b"\0" * 128)
+        ds = FileDataset(str(subject_dir / "image.dcm"), {}, file_meta=meta, preamble=b"\0" * 128)
 
         # De-identified in the MIMIC style: real dataset ships these blanked, and
         # the pipeline's PHI audit asserts they stay that way.
@@ -342,7 +355,9 @@ def generate_mimic(root: Path, n_studies: int, size: int, seed: int) -> int:
         ds.SOPInstanceUID = meta.MediaStorageSOPInstanceUID
         ds.SOPClassUID = meta.MediaStorageSOPClassUID
         ds.StudyID = study
-        ds.StudyDate = (datetime(2150, 1, 1) + timedelta(days=int(rng.integers(0, 3000)))).strftime("%Y%m%d")
+        ds.StudyDate = (datetime(2150, 1, 1) + timedelta(days=int(rng.integers(0, 3000)))).strftime(
+            "%Y%m%d"
+        )
         ds.Modality = "DX"
         ds.ViewPosition = "PA" if rng.random() < 0.7 else "AP"
         ds.BodyPartExamined = "CHEST"

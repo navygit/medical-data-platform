@@ -99,7 +99,10 @@ def _git_revision() -> str:
     try:
         out = subprocess.run(
             ["git", "rev-parse", "HEAD"],
-            capture_output=True, text=True, timeout=5, check=False,
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
         )
         return out.stdout.strip() or "unknown"
     except (OSError, subprocess.SubprocessError):
@@ -128,13 +131,15 @@ def build_file_entries(records: Sequence[ScanRecord]) -> list[FileEntry]:
         if not rec.sha256:
             log.warning("versioning.skip_unhashed", extra={"path": rec.filepath})
             continue
-        entries.append(FileEntry(
-            path=rec.filepath,
-            sha256=rec.sha256,
-            size_bytes=rec.file_size_bytes or 0,
-            patient_id=rec.patient_id,
-            modality=rec.modality,
-        ))
+        entries.append(
+            FileEntry(
+                path=rec.filepath,
+                sha256=rec.sha256,
+                size_bytes=rec.file_size_bytes or 0,
+                patient_id=rec.patient_id,
+                modality=rec.modality,
+            )
+        )
     return entries
 
 
@@ -176,9 +181,7 @@ def create_release(
         total_bytes=sum(e.size_bytes for e in entries),
         files=entries,
         splits=splits or {},
-        class_balance=dict(Counter(
-            str(c) for r in records for c in (r.label_classes or [])
-        )),
+        class_balance=dict(Counter(str(c) for r in records for c in (r.label_classes or []))),
         modality_counts=dict(Counter(r.modality for r in records)),
         qc_summary=qc_summary or {},
         config_snapshot=dump_config(cfg),
@@ -219,12 +222,15 @@ def write_release(release: Release, root: Path) -> Path:
     )
 
     _update_index(root, release)
-    log.info("release.written", extra={
-        "dataset": release.dataset,
-        "version": release.version,
-        "hash": release.dataset_hash[:12],
-        "n_files": release.n_files,
-    })
+    log.info(
+        "release.written",
+        extra={
+            "dataset": release.dataset,
+            "version": release.version,
+            "hash": release.dataset_hash[:12],
+            "n_files": release.n_files,
+        },
+    )
     return manifest
 
 
@@ -240,15 +246,17 @@ def _update_index(root: Path, release: Release) -> None:
             index = []
 
     index = [row for row in index if row.get("version") != release.version]
-    index.append({
-        "dataset": release.dataset,
-        "version": release.version,
-        "created_at": release.created_at,
-        "dataset_hash": release.dataset_hash,
-        "n_files": release.n_files,
-        "n_subjects": release.n_subjects,
-        "parent_version": release.parent_version,
-    })
+    index.append(
+        {
+            "dataset": release.dataset,
+            "version": release.version,
+            "created_at": release.created_at,
+            "dataset_hash": release.dataset_hash,
+            "n_files": release.n_files,
+            "n_subjects": release.n_subjects,
+            "parent_version": release.parent_version,
+        }
+    )
     index.sort(key=lambda row: row["created_at"])
     index_path.write_text(json.dumps(index, indent=2), encoding="utf-8")
 
@@ -289,11 +297,14 @@ def verify_release(release: Release, root: Path) -> list[str]:
                 f"(manifest {entry.sha256[:12]}, disk {actual[:12]})"
             )
 
-    log.info("release.verified", extra={
-        "version": release.version,
-        "n_files": release.n_files,
-        "n_problems": len(problems),
-    })
+    log.info(
+        "release.verified",
+        extra={
+            "version": release.version,
+            "n_files": release.n_files,
+            "n_problems": len(problems),
+        },
+    )
     return problems
 
 

@@ -71,7 +71,9 @@ def _surface_points(mask: np.ndarray) -> np.ndarray:
     return np.argwhere(surface)
 
 
-def hausdorff95(pred: np.ndarray, target: np.ndarray, spacing: tuple[float, ...] = (1, 1, 1)) -> float:
+def hausdorff95(
+    pred: np.ndarray, target: np.ndarray, spacing: tuple[float, ...] = (1, 1, 1)
+) -> float:
     """Symmetric 95th-percentile Hausdorff distance in millimetres.
 
     Args:
@@ -169,17 +171,20 @@ def evaluate(cfg: Config, split: str = "test", threshold: float = 0.5) -> pd.Dat
 
             metrics = evaluate_subject(pred, target, spacing)
             rows.append({"subject": sample["subject"], "split": split, **metrics})
-            log.info("evaluate.subject", extra={
-                "subject": sample["subject"],
-                **{k: round(v, 3) for k, v in metrics.items() if k.startswith("dice")},
-            })
+            log.info(
+                "evaluate.subject",
+                extra={
+                    "subject": sample["subject"],
+                    **{k: round(v, 3) for k, v in metrics.items() if k.startswith("dice")},
+                },
+            )
 
             # Figures for the first few subjects: WT is the most legible region.
             if i < 3:
                 plot_slice_grid(
                     volume=sample["image"][CHANNELS.index("t1ce")],
-                    mask=target[1],                 # WT ground truth
-                    prediction=pred[1],             # WT prediction
+                    mask=target[1],  # WT ground truth
+                    prediction=pred[1],  # WT prediction
                     out_path=figures_dir / f"pred_{sample['subject']}.png",
                     title=f"{sample['subject']} - whole tumour",
                 )
@@ -208,8 +213,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--config", type=Path, default=Path("configs/brats.yaml"))
     parser.add_argument("--split", default="test", choices=["train", "val", "test"])
     parser.add_argument("--threshold", type=float, default=0.5)
-    parser.add_argument("--set", dest="overrides", action="append", default=[],
-                        metavar="KEY=VALUE")
+    parser.add_argument("--set", dest="overrides", action="append", default=[], metavar="KEY=VALUE")
     args = parser.parse_args(argv)
 
     cfg = load_config(args.config, overrides=args.overrides)

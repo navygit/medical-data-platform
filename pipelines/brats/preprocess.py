@@ -172,25 +172,26 @@ def preprocess_record(rec: ScanRecord, cfg: Config) -> ScanRecord | None:
             mask_data = np.asanyarray(mask_img.dataobj)
             tumor_volume = float(np.count_nonzero(mask_data) * np.prod(spacing))
         except Exception as exc:
-            log.warning("preprocess.mask_failed",
-                        extra={"path": rec.mask_path, "error": str(exc)})
+            log.warning("preprocess.mask_failed", extra={"path": rec.mask_path, "error": str(exc)})
 
     finite = data[np.isfinite(data)]
-    return rec.model_copy(update={
-        "filepath": relative_to(out_path, Path(cfg.paths.processed)),
-        "mask_path": mask_out,
-        "shape": [int(s) for s in data.shape],
-        "voxel_spacing": list(spacing),
-        "orientation": cfg.preprocess.target_orientation,
-        "affine": np.asarray(out_img.affine, dtype=float).tolist(),
-        "intensity_min": float(finite.min()) if finite.size else None,
-        "intensity_max": float(finite.max()) if finite.size else None,
-        "intensity_mean": float(finite.mean()) if finite.size else None,
-        "intensity_std": float(finite.std()) if finite.size else None,
-        "tumor_volume_mm3": tumor_volume,
-        "file_size_bytes": file_size(out_path),
-        "sha256": sha256_file(out_path),
-    })
+    return rec.model_copy(
+        update={
+            "filepath": relative_to(out_path, Path(cfg.paths.processed)),
+            "mask_path": mask_out,
+            "shape": [int(s) for s in data.shape],
+            "voxel_spacing": list(spacing),
+            "orientation": cfg.preprocess.target_orientation,
+            "affine": np.asarray(out_img.affine, dtype=float).tolist(),
+            "intensity_min": float(finite.min()) if finite.size else None,
+            "intensity_max": float(finite.max()) if finite.size else None,
+            "intensity_mean": float(finite.mean()) if finite.size else None,
+            "intensity_std": float(finite.std()) if finite.size else None,
+            "tumor_volume_mm3": tumor_volume,
+            "file_size_bytes": file_size(out_path),
+            "sha256": sha256_file(out_path),
+        }
+    )
 
 
 def preprocess(records: list[ScanRecord], cfg: Config) -> list[ScanRecord]:
@@ -200,12 +201,15 @@ def preprocess(records: list[ScanRecord], cfg: Config) -> list[ScanRecord]:
     QC already rejected wastes compute and risks it reaching a release.
     """
     eligible = [r for r in records if r.qc_status != "fail"]
-    log.info("preprocess.start", extra={
-        "n_total": len(records),
-        "n_eligible": len(eligible),
-        "target_spacing": cfg.preprocess.target_spacing,
-        "norm": cfg.preprocess.intensity_norm,
-    })
+    log.info(
+        "preprocess.start",
+        extra={
+            "n_total": len(records),
+            "n_eligible": len(eligible),
+            "target_spacing": cfg.preprocess.target_spacing,
+            "norm": cfg.preprocess.intensity_norm,
+        },
+    )
 
     out: list[ScanRecord] = []
     for rec in eligible:

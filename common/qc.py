@@ -111,11 +111,23 @@ def _file_readable(rec: ScanRecord, cfg: Config) -> Iterable[QCFinding]:
     """
     path = resolve_path(rec, cfg)
     if not path.exists():
-        yield QCFinding(rec.patient_id, rec.modality, "file_readable", "ERROR",
-                        f"file missing: {rec.filepath}", rec.filepath)
+        yield QCFinding(
+            rec.patient_id,
+            rec.modality,
+            "file_readable",
+            "ERROR",
+            f"file missing: {rec.filepath}",
+            rec.filepath,
+        )
     elif path.stat().st_size == 0:
-        yield QCFinding(rec.patient_id, rec.modality, "file_readable", "ERROR",
-                        "file is zero bytes", rec.filepath)
+        yield QCFinding(
+            rec.patient_id,
+            rec.modality,
+            "file_readable",
+            "ERROR",
+            "file is zero bytes",
+            rec.filepath,
+        )
 
 
 @check("corrupt_volume")
@@ -127,39 +139,68 @@ def _corrupt_volume(rec: ScanRecord, cfg: Config) -> Iterable[QCFinding]:
     """
     stats = (rec.intensity_min, rec.intensity_max, rec.intensity_mean)
     if any(s is None for s in stats):
-        yield QCFinding(rec.patient_id, rec.modality, "corrupt_volume", "ERROR",
-                        "intensity statistics unavailable (unreadable pixel data)",
-                        rec.filepath)
+        yield QCFinding(
+            rec.patient_id,
+            rec.modality,
+            "corrupt_volume",
+            "ERROR",
+            "intensity statistics unavailable (unreadable pixel data)",
+            rec.filepath,
+        )
         return
     if any(not np.isfinite(s) for s in stats):  # type: ignore[arg-type]
-        yield QCFinding(rec.patient_id, rec.modality, "corrupt_volume", "ERROR",
-                        "non-finite intensity values (NaN/Inf in volume)", rec.filepath)
+        yield QCFinding(
+            rec.patient_id,
+            rec.modality,
+            "corrupt_volume",
+            "ERROR",
+            "non-finite intensity values (NaN/Inf in volume)",
+            rec.filepath,
+        )
 
 
 @check("empty_volume")
 def _empty_volume(rec: ScanRecord, cfg: Config) -> Iterable[QCFinding]:
     """The volume carries signal rather than a constant value."""
     if rec.intensity_std is not None and float(rec.intensity_std) == 0.0:
-        yield QCFinding(rec.patient_id, rec.modality, "empty_volume", "ERROR",
-                        "volume is constant (zero variance)", rec.filepath)
+        yield QCFinding(
+            rec.patient_id,
+            rec.modality,
+            "empty_volume",
+            "ERROR",
+            "volume is constant (zero variance)",
+            rec.filepath,
+        )
 
 
 @check("dimensions")
 def _dimensions(rec: ScanRecord, cfg: Config) -> Iterable[QCFinding]:
     """The volume is 3D and at least ``qc.min_shape`` in every axis."""
     if not rec.shape:
-        yield QCFinding(rec.patient_id, rec.modality, "dimensions", "ERROR",
-                        "shape unavailable", rec.filepath)
+        yield QCFinding(
+            rec.patient_id, rec.modality, "dimensions", "ERROR", "shape unavailable", rec.filepath
+        )
         return
     if len(rec.shape) != 3:
-        yield QCFinding(rec.patient_id, rec.modality, "dimensions", "ERROR",
-                        f"expected 3D volume, got {len(rec.shape)}D {rec.shape}",
-                        rec.filepath)
+        yield QCFinding(
+            rec.patient_id,
+            rec.modality,
+            "dimensions",
+            "ERROR",
+            f"expected 3D volume, got {len(rec.shape)}D {rec.shape}",
+            rec.filepath,
+        )
         return
     minimum = cfg.qc.min_shape
     if any(actual < want for actual, want in zip(rec.shape, minimum, strict=False)):
-        yield QCFinding(rec.patient_id, rec.modality, "dimensions", "ERROR",
-                        f"shape {rec.shape} below minimum {minimum}", rec.filepath)
+        yield QCFinding(
+            rec.patient_id,
+            rec.modality,
+            "dimensions",
+            "ERROR",
+            f"shape {rec.shape} below minimum {minimum}",
+            rec.filepath,
+        )
 
 
 @check("orientation")
@@ -170,35 +211,64 @@ def _orientation(rec: ScanRecord, cfg: Config) -> Iterable[QCFinding]:
     non-standard orientation is a fact to record, not a reason to drop a study.
     """
     if rec.orientation and rec.orientation.upper() != cfg.qc.expected_orientation:
-        yield QCFinding(rec.patient_id, rec.modality, "orientation", "WARN",
-                        f"orientation {rec.orientation} != expected "
-                        f"{cfg.qc.expected_orientation} (will be reoriented)",
-                        rec.filepath)
+        yield QCFinding(
+            rec.patient_id,
+            rec.modality,
+            "orientation",
+            "WARN",
+            f"orientation {rec.orientation} != expected "
+            f"{cfg.qc.expected_orientation} (will be reoriented)",
+            rec.filepath,
+        )
 
 
 @check("spacing")
 def _spacing(rec: ScanRecord, cfg: Config) -> Iterable[QCFinding]:
     """Voxel spacing is present, positive and within the configured ceiling."""
     if not rec.voxel_spacing:
-        yield QCFinding(rec.patient_id, rec.modality, "spacing", "WARN",
-                        "voxel spacing unavailable", rec.filepath)
+        yield QCFinding(
+            rec.patient_id,
+            rec.modality,
+            "spacing",
+            "WARN",
+            "voxel spacing unavailable",
+            rec.filepath,
+        )
         return
     if any(s <= 0 for s in rec.voxel_spacing):
-        yield QCFinding(rec.patient_id, rec.modality, "spacing", "ERROR",
-                        f"non-positive voxel spacing {rec.voxel_spacing}", rec.filepath)
+        yield QCFinding(
+            rec.patient_id,
+            rec.modality,
+            "spacing",
+            "ERROR",
+            f"non-positive voxel spacing {rec.voxel_spacing}",
+            rec.filepath,
+        )
         return
     if any(s > cfg.qc.max_spacing_mm for s in rec.voxel_spacing):
-        yield QCFinding(rec.patient_id, rec.modality, "spacing", "WARN",
-                        f"coarse spacing {[round(s, 2) for s in rec.voxel_spacing]} mm "
-                        f"exceeds {cfg.qc.max_spacing_mm} mm", rec.filepath)
+        yield QCFinding(
+            rec.patient_id,
+            rec.modality,
+            "spacing",
+            "WARN",
+            f"coarse spacing {[round(s, 2) for s in rec.voxel_spacing]} mm "
+            f"exceeds {cfg.qc.max_spacing_mm} mm",
+            rec.filepath,
+        )
 
 
 @check("missing_mask")
 def _missing_mask(rec: ScanRecord, cfg: Config) -> Iterable[QCFinding]:
     """A segmentation mask exists for the series."""
     if not rec.mask_available:
-        yield QCFinding(rec.patient_id, rec.modality, "missing_mask", "WARN",
-                        "no segmentation mask for this subject", rec.filepath)
+        yield QCFinding(
+            rec.patient_id,
+            rec.modality,
+            "missing_mask",
+            "WARN",
+            "no segmentation mask for this subject",
+            rec.filepath,
+        )
 
 
 @check("empty_mask")
@@ -215,9 +285,15 @@ def _empty_mask(rec: ScanRecord, cfg: Config) -> Iterable[QCFinding]:
         return
     n_voxels = rec.tumor_volume_mm3 / voxel_volume
     if n_voxels < cfg.qc.min_tumor_voxels:
-        yield QCFinding(rec.patient_id, rec.modality, "empty_mask", "ERROR",
-                        f"mask has ~{n_voxels:.0f} labelled voxels, below minimum "
-                        f"{cfg.qc.min_tumor_voxels}", rec.filepath)
+        yield QCFinding(
+            rec.patient_id,
+            rec.modality,
+            "empty_mask",
+            "ERROR",
+            f"mask has ~{n_voxels:.0f} labelled voxels, below minimum "
+            f"{cfg.qc.min_tumor_voxels}",
+            rec.filepath,
+        )
 
 
 def run_checks(
@@ -249,16 +325,25 @@ def run_checks(
             except Exception as exc:
                 log.exception("qc.check_failed", extra={"check": name, "patient": rec.patient_id})
                 findings.append(
-                    QCFinding(rec.patient_id, rec.modality, name, "ERROR",
-                              f"check raised {type(exc).__name__}: {exc}", rec.filepath)
+                    QCFinding(
+                        rec.patient_id,
+                        rec.modality,
+                        name,
+                        "ERROR",
+                        f"check raised {type(exc).__name__}: {exc}",
+                        rec.filepath,
+                    )
                 )
 
-    log.info("qc.complete", extra={
-        "n_records": len(records),
-        "n_checks": len(names),
-        "n_findings": len(findings),
-        "n_errors": sum(f.severity == "ERROR" for f in findings),
-    })
+    log.info(
+        "qc.complete",
+        extra={
+            "n_records": len(records),
+            "n_checks": len(names),
+            "n_findings": len(findings),
+            "n_errors": sum(f.severity == "ERROR" for f in findings),
+        },
+    )
     return findings
 
 
@@ -293,29 +378,45 @@ def check_duplicates(records: Sequence[ScanRecord]) -> list[QCFinding]:
             keep = patients[0]
             for rec in group:
                 is_copy = rec.patient_id != keep
-                findings.append(QCFinding(
-                    rec.patient_id, rec.modality, "duplicate_content",
-                    "ERROR" if is_copy else "INFO",
-                    f"identical content (sha256 {digest[:12]}) shared by {patients}; "
-                    + (f"rejected as copy of {keep}" if is_copy else "retained as canonical"),
-                    rec.filepath,
-                ))
+                findings.append(
+                    QCFinding(
+                        rec.patient_id,
+                        rec.modality,
+                        "duplicate_content",
+                        "ERROR" if is_copy else "INFO",
+                        f"identical content (sha256 {digest[:12]}) shared by {patients}; "
+                        + (f"rejected as copy of {keep}" if is_copy else "retained as canonical"),
+                        rec.filepath,
+                    )
+                )
         else:
             for rec in group:
-                findings.append(QCFinding(
-                    rec.patient_id, rec.modality, "duplicate_content", "WARN",
-                    f"file repeated within subject (sha256 {digest[:12]})", rec.filepath,
-                ))
+                findings.append(
+                    QCFinding(
+                        rec.patient_id,
+                        rec.modality,
+                        "duplicate_content",
+                        "WARN",
+                        f"file repeated within subject (sha256 {digest[:12]})",
+                        rec.filepath,
+                    )
+                )
 
     seen: dict[tuple[str, str], int] = defaultdict(int)
     for rec in records:
         key = (rec.patient_id, rec.modality)
         seen[key] += 1
         if seen[key] > 1:
-            findings.append(QCFinding(
-                rec.patient_id, rec.modality, "duplicate_series", "WARN",
-                f"{seen[key]} series share patient/modality {key}", rec.filepath,
-            ))
+            findings.append(
+                QCFinding(
+                    rec.patient_id,
+                    rec.modality,
+                    "duplicate_series",
+                    "WARN",
+                    f"{seen[key]} series share patient/modality {key}",
+                    rec.filepath,
+                )
+            )
     return findings
 
 
@@ -333,10 +434,16 @@ def check_missing_modalities(records: Sequence[ScanRecord], cfg: Config) -> list
     for patient, modalities in sorted(have.items()):
         missing = expected - modalities
         if missing:
-            findings.append(QCFinding(
-                patient, ",".join(sorted(missing)), "missing_modalities", "ERROR",
-                f"subject missing required modalities: {sorted(missing)}", "",
-            ))
+            findings.append(
+                QCFinding(
+                    patient,
+                    ",".join(sorted(missing)),
+                    "missing_modalities",
+                    "ERROR",
+                    f"subject missing required modalities: {sorted(missing)}",
+                    "",
+                )
+            )
     return findings
 
 
@@ -496,15 +603,18 @@ def apply_findings(
     updated: list[ScanRecord] = []
     for rec in records:
         relevant = [
-            f for f in by_subject.get(rec.patient_id, [])
+            f
+            for f in by_subject.get(rec.patient_id, [])
             if f.modality in (rec.modality, "") or f.check.startswith("missing_modalities")
         ]
         severities = {f.severity for f in relevant}
         status = "fail" if "ERROR" in severities else "warn" if "WARN" in severities else "pass"
         updated.append(
-            rec.model_copy(update={
-                "qc_status": status,
-                "qc_flags": sorted({f.check for f in relevant}),
-            })
+            rec.model_copy(
+                update={
+                    "qc_status": status,
+                    "qc_flags": sorted({f.check for f in relevant}),
+                }
+            )
         )
     return updated

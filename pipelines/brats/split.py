@@ -59,10 +59,7 @@ def _subject_strata(records: Sequence[ScanRecord], column: str | None) -> dict[s
             for s, v in volumes.items()
         }
 
-    return {
-        s: str(vs[0]) if vs else "unknown"
-        for s, vs in by_subject.items()
-    }
+    return {s: str(vs[0]) if vs else "unknown" for s, vs in by_subject.items()}
 
 
 def _allocate(subjects: list[str], cfg: Config, rng: np.random.Generator) -> dict[str, list[str]]:
@@ -82,8 +79,8 @@ def _allocate(subjects: list[str], cfg: Config, rng: np.random.Generator) -> dic
 
     return {
         "train": shuffled[:n_train],
-        "val": shuffled[n_train:n_train + n_val],
-        "test": shuffled[n_train + n_val:],
+        "val": shuffled[n_train : n_train + n_val],
+        "test": shuffled[n_train + n_val :],
     }
 
 
@@ -117,23 +114,29 @@ def make_splits(records: Sequence[ScanRecord], cfg: Config) -> dict[str, list[st
         allocated = _allocate(members, cfg, rng)
         for name, chunk in allocated.items():
             splits[name].extend(chunk)
-        log.debug("split.stratum", extra={
-            "stratum": stratum,
-            "n": len(members),
-            **{k: len(v) for k, v in allocated.items()},
-        })
+        log.debug(
+            "split.stratum",
+            extra={
+                "stratum": stratum,
+                "n": len(members),
+                **{k: len(v) for k, v in allocated.items()},
+            },
+        )
 
     splits = {k: sorted(v) for k, v in splits.items()}
     verify_no_leakage(splits)
 
-    log.info("split.complete", extra={
-        "n_subjects": len(subjects),
-        "train": len(splits["train"]),
-        "val": len(splits["val"]),
-        "test": len(splits["test"]),
-        "stratify_by": cfg.split.stratify_by,
-        "seed": cfg.split.seed,
-    })
+    log.info(
+        "split.complete",
+        extra={
+            "n_subjects": len(subjects),
+            "train": len(splits["train"]),
+            "val": len(splits["val"]),
+            "test": len(splits["test"]),
+            "stratify_by": cfg.split.stratify_by,
+            "seed": cfg.split.seed,
+        },
+    )
     return splits
 
 
@@ -145,18 +148,15 @@ def verify_no_leakage(splits: dict[str, list[str]]) -> None:
     """
     names = list(splits)
     for i, a in enumerate(names):
-        for b in names[i + 1:]:
+        for b in names[i + 1 :]:
             overlap = set(splits[a]) & set(splits[b])
             if overlap:
                 raise LeakageError(
-                    f"{len(overlap)} subject(s) in both '{a}' and '{b}': "
-                    f"{sorted(overlap)[:5]}"
+                    f"{len(overlap)} subject(s) in both '{a}' and '{b}': " f"{sorted(overlap)[:5]}"
                 )
 
 
-def assign_splits(
-    records: Sequence[ScanRecord], splits: dict[str, list[str]]
-) -> list[ScanRecord]:
+def assign_splits(records: Sequence[ScanRecord], splits: dict[str, list[str]]) -> list[ScanRecord]:
     """Stamp each record with its split name in ``extra['split']``."""
     lookup = {subject: name for name, members in splits.items() for subject in members}
     return [
@@ -175,11 +175,13 @@ def split_summary(records: Sequence[ScanRecord], splits: dict[str, list[str]]) -
     for name, members in splits.items():
         subset = [r for r in records if r.patient_id in set(members)]
         volumes = [r.tumor_volume_mm3 for r in subset if r.tumor_volume_mm3 is not None]
-        rows.append({
-            "split": name,
-            "n_subjects": len(members),
-            "n_series": len(subset),
-            "mean_tumor_volume_mm3": round(float(np.mean(volumes)), 1) if volumes else 0.0,
-            "modalities": ",".join(sorted({r.modality for r in subset})),
-        })
+        rows.append(
+            {
+                "split": name,
+                "n_subjects": len(members),
+                "n_series": len(subset),
+                "mean_tumor_volume_mm3": round(float(np.mean(volumes)), 1) if volumes else 0.0,
+                "modalities": ",".join(sorted({r.modality for r in subset})),
+            }
+        )
     return pd.DataFrame(rows)

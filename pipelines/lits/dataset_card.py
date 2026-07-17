@@ -88,19 +88,27 @@ def build_card(
     """
     generated = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
 
-    warnings = bias_findings[bias_findings["severity"] == "WARN"] if not bias_findings.empty else pd.DataFrame()
+    warnings = (
+        bias_findings[bias_findings["severity"] == "WARN"]
+        if not bias_findings.empty
+        else pd.DataFrame()
+    )
     bias_bullets = [str(row["message"]) for _, row in warnings.iterrows()]
 
     grade_counts = (
         quality["grade"].value_counts().sort_index().to_dict() if "grade" in quality else {}
     )
-    mean_score = round(float(quality["quality_score"].mean()), 1) if "quality_score" in quality and len(quality) else 0.0
+    mean_score = (
+        round(float(quality["quality_score"].mean()), 1)
+        if "quality_score" in quality and len(quality)
+        else 0.0
+    )
     low_quality = int((quality["quality_score"] < 65).sum()) if "quality_score" in quality else 0
 
     criteria_rows = pd.DataFrame(cohort_spec.get("criteria", []))
-    split_rows = pd.DataFrame([
-        {"split": name, "n_subjects": len(members)} for name, members in splits.items()
-    ])
+    split_rows = pd.DataFrame(
+        [{"split": name, "n_subjects": len(members)} for name, members in splits.items()]
+    )
 
     return f"""# Dataset Card: {dataset} ({version})
 

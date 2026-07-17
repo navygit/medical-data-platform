@@ -44,14 +44,17 @@ from pipelines.mimic.report_parser import extract_labels, parse_report, split_se
 # --------------------------------------------------------------------------- #
 
 
-@pytest.mark.parametrize("filename, expected", [
-    ("BraTS2021_00001_t1.nii.gz", "t1"),
-    ("BraTS2021_00001_t1ce.nii.gz", "t1ce"),   # must not be shadowed by 't1'
-    ("BraTS2021_00001_flair.nii.gz", "flair"),
-    ("BraTS2021_00001_seg.nii.gz", "seg"),
-    ("BraTS2021_00001_t2.nii", "t2"),
-    ("readme.txt", None),
-])
+@pytest.mark.parametrize(
+    "filename, expected",
+    [
+        ("BraTS2021_00001_t1.nii.gz", "t1"),
+        ("BraTS2021_00001_t1ce.nii.gz", "t1ce"),  # must not be shadowed by 't1'
+        ("BraTS2021_00001_flair.nii.gz", "flair"),
+        ("BraTS2021_00001_seg.nii.gz", "seg"),
+        ("BraTS2021_00001_t2.nii", "t2"),
+        ("readme.txt", None),
+    ],
+)
 def test_parse_modality(filename: str, expected: str | None) -> None:
     assert parse_modality(Path(filename)) == expected
 
@@ -162,8 +165,13 @@ def test_preprocess_writes_processed_volume(brats_cfg: Config) -> None:
 
 def _records(n_subjects: int) -> list[ScanRecord]:
     return [
-        ScanRecord(patient_id=f"p{i:03d}", modality=m, filepath=f"p{i}_{m}.nii.gz",
-                   voxel_spacing=[1.0, 1.0, 1.0], tumor_volume_mm3=100.0 * (i + 1))
+        ScanRecord(
+            patient_id=f"p{i:03d}",
+            modality=m,
+            filepath=f"p{i}_{m}.nii.gz",
+            voxel_spacing=[1.0, 1.0, 1.0],
+            tumor_volume_mm3=100.0 * (i + 1),
+        )
         for i in range(n_subjects)
         for m in ("t1", "t1ce", "t2", "flair")
     ]
@@ -182,9 +190,10 @@ def test_split_is_deterministic_under_seed(brats_cfg: Config) -> None:
     assert make_splits(records, brats_cfg) == make_splits(records, brats_cfg)
 
     brats_cfg.split.seed = 999
-    assert make_splits(records, brats_cfg) != make_splits(records, brats_cfg.model_copy(
-        update={"split": brats_cfg.split.model_copy(update={"seed": 42})}
-    ))
+    assert make_splits(records, brats_cfg) != make_splits(
+        records,
+        brats_cfg.model_copy(update={"split": brats_cfg.split.model_copy(update={"seed": 42})}),
+    )
 
 
 def test_split_allocates_all_three_partitions(brats_cfg: Config) -> None:
@@ -223,23 +232,26 @@ def test_split_handles_empty_input(brats_cfg: Config) -> None:
 # --------------------------------------------------------------------------- #
 
 
-@pytest.mark.parametrize("text, finding, expected", [
-    ("No evidence of pneumonia.", "pneumonia", 0),
-    ("There is pneumonia in the RLL.", "pneumonia", 1),
-    ("Pneumonia cannot be excluded.", "pneumonia", -1),
-    ("Findings compatible with pneumonia.", "pneumonia", -1),
-    ("Possible pneumonia.", "pneumonia", -1),
-    # One negation scoping over two findings.
-    ("No pleural effusion or pneumothorax.", "pleural_effusion", 0),
-    ("No pleural effusion or pneumothorax.", "pneumothorax", 0),
-    # Termination: the negation must not survive "but".
-    ("No effusion, but consolidation is present.", "pneumonia", 1),
-    ("No effusion, but consolidation is present.", "pleural_effusion", 0),
-    # Sentence boundary must stop scope bleed.
-    ("Heart size is normal. Small effusion.", "pleural_effusion", 1),
-    # Not mentioned stays None, distinct from negated.
-    ("The lungs are clear bilaterally.", "pneumothorax", None),
-])
+@pytest.mark.parametrize(
+    "text, finding, expected",
+    [
+        ("No evidence of pneumonia.", "pneumonia", 0),
+        ("There is pneumonia in the RLL.", "pneumonia", 1),
+        ("Pneumonia cannot be excluded.", "pneumonia", -1),
+        ("Findings compatible with pneumonia.", "pneumonia", -1),
+        ("Possible pneumonia.", "pneumonia", -1),
+        # One negation scoping over two findings.
+        ("No pleural effusion or pneumothorax.", "pleural_effusion", 0),
+        ("No pleural effusion or pneumothorax.", "pneumothorax", 0),
+        # Termination: the negation must not survive "but".
+        ("No effusion, but consolidation is present.", "pneumonia", 1),
+        ("No effusion, but consolidation is present.", "pleural_effusion", 0),
+        # Sentence boundary must stop scope bleed.
+        ("Heart size is normal. Small effusion.", "pleural_effusion", 1),
+        # Not mentioned stays None, distinct from negated.
+        ("The lungs are clear bilaterally.", "pneumothorax", None),
+    ],
+)
 def test_negation_and_uncertainty(text: str, finding: str, expected: int | None) -> None:
     assert extract_labels(text)[0][finding] == expected
 
@@ -263,9 +275,7 @@ def test_indication_section_excluded_from_labels() -> None:
 
 
 def test_split_sections() -> None:
-    sections = split_sections(
-        "EXAMINATION: CHEST\nFINDINGS: Clear.\nIMPRESSION: Normal."
-    )
+    sections = split_sections("EXAMINATION: CHEST\nFINDINGS: Clear.\nIMPRESSION: Normal.")
     assert set(sections) == {"examination", "findings", "impression"}
     assert sections["impression"] == "Normal."
 
@@ -278,9 +288,9 @@ def test_unstructured_report_still_parses() -> None:
 
 def test_severity_and_measurements() -> None:
     report = parse_report("FINDINGS: Moderate effusion measuring 3.2 cm and a 5 mm nodule.")
-    assert report.severity["pleural_effusion"] == 3       # 'moderate'
+    assert report.severity["pleural_effusion"] == 3  # 'moderate'
     assert 3.2 in report.measurements_cm
-    assert 0.5 in report.measurements_cm                  # 5 mm normalised to cm
+    assert 0.5 in report.measurements_cm  # 5 mm normalised to cm
 
 
 def test_recommendations_extracted() -> None:
@@ -293,10 +303,17 @@ def test_recommendations_extracted() -> None:
 # --------------------------------------------------------------------------- #
 
 
-@pytest.mark.parametrize("raw, expected", [
-    ("058Y", 58.0), ("012M", 1.0), ("100Y", 100.0),
-    ("", None), (None, None), ("garbage", None),
-])
+@pytest.mark.parametrize(
+    "raw, expected",
+    [
+        ("058Y", 58.0),
+        ("012M", 1.0),
+        ("100Y", 100.0),
+        ("", None),
+        (None, None),
+        ("garbage", None),
+    ],
+)
 def test_parse_age(raw, expected) -> None:
     result = parse_age(raw)
     assert result is None if expected is None else result == pytest.approx(expected)
@@ -340,29 +357,55 @@ def test_deidentify_blanks_identifiers() -> None:
 
 
 def _fusion_frame() -> pd.DataFrame:
-    return pd.DataFrame([
-        {"subject_id": "p1", "study_id": "s1", "label_pneumonia": 1, "label_edema": 0,
-         "label_cardiomegaly": None, "label_pleural_effusion": -1},
-        {"subject_id": "p1", "study_id": "s2", "label_pneumonia": 0, "label_edema": 1,
-         "label_cardiomegaly": 1, "label_pleural_effusion": 0},
-        {"subject_id": "p2", "study_id": "s3", "label_pneumonia": -1, "label_edema": 0,
-         "label_cardiomegaly": 0, "label_pleural_effusion": 1},
-        {"subject_id": "p3", "study_id": "s4", "label_pneumonia": 1, "label_edema": 1,
-         "label_cardiomegaly": 0, "label_pleural_effusion": 0},
-    ])
+    return pd.DataFrame(
+        [
+            {
+                "subject_id": "p1",
+                "study_id": "s1",
+                "label_pneumonia": 1,
+                "label_edema": 0,
+                "label_cardiomegaly": None,
+                "label_pleural_effusion": -1,
+            },
+            {
+                "subject_id": "p1",
+                "study_id": "s2",
+                "label_pneumonia": 0,
+                "label_edema": 1,
+                "label_cardiomegaly": 1,
+                "label_pleural_effusion": 0,
+            },
+            {
+                "subject_id": "p2",
+                "study_id": "s3",
+                "label_pneumonia": -1,
+                "label_edema": 0,
+                "label_cardiomegaly": 0,
+                "label_pleural_effusion": 1,
+            },
+            {
+                "subject_id": "p3",
+                "study_id": "s4",
+                "label_pneumonia": 1,
+                "label_edema": 1,
+                "label_cardiomegaly": 0,
+                "label_pleural_effusion": 0,
+            },
+        ]
+    )
 
 
 def test_binarise_uncertain_policies() -> None:
     frame = _fusion_frame()
 
     zeros, _ = binarise_labels(frame, uncertain="zeros")
-    assert zeros[2, 0] == 0.0        # -1 -> 0
+    assert zeros[2, 0] == 0.0  # -1 -> 0
 
     ones, _ = binarise_labels(frame, uncertain="ones")
-    assert ones[2, 0] == 1.0         # -1 -> 1
+    assert ones[2, 0] == 1.0  # -1 -> 1
 
     ignore, _ = binarise_labels(frame, uncertain="ignore")
-    assert np.isnan(ignore[2, 0])    # -1 -> NaN for a masked loss
+    assert np.isnan(ignore[2, 0])  # -1 -> NaN for a masked loss
 
     # 'Not mentioned' is always negative, under every policy.
     assert zeros[0, 2] == 0.0 and ones[0, 2] == 0.0 and ignore[0, 2] == 0.0
@@ -384,7 +427,7 @@ def test_fusion_join_reports_orphans() -> None:
     ]
     reports = {
         "s1": parse_report("FINDINGS: Clear.", "s1"),
-        "s3": parse_report("FINDINGS: Clear.", "s3"),                 # no image
+        "s3": parse_report("FINDINGS: Clear.", "s3"),  # no image
     }
 
     table, stats = build_fusion_table(images, reports)
@@ -414,8 +457,8 @@ def test_weights_sum_to_one() -> None:
 def test_integrity_scoring() -> None:
     assert score_integrity(np.random.rand(4, 4, 4))[0] == 1.0
     assert score_integrity(None)[0] == 0.0
-    assert score_integrity(np.full((4, 4, 4), 5.0))[0] == 0.0          # constant
-    assert score_integrity(np.array([[[np.nan, 1.0]]]))[0] == 0.0      # non-finite
+    assert score_integrity(np.full((4, 4, 4), 5.0))[0] == 0.0  # constant
+    assert score_integrity(np.array([[[np.nan, 1.0]]]))[0] == 0.0  # non-finite
 
 
 def test_spacing_scoring_penalises_anisotropy() -> None:
@@ -426,7 +469,7 @@ def test_spacing_scoring_penalises_anisotropy() -> None:
     assert isotropic == pytest.approx(1.0)
     assert reason and "anisotropic" in reason
     assert score_spacing(None)[0] == 0.0
-    assert score_spacing([0.0, 1.0, 1.0])[0] == 0.0                    # invalid
+    assert score_spacing([0.0, 1.0, 1.0])[0] == 0.0  # invalid
 
 
 def test_slice_continuity_detects_duplicates() -> None:
@@ -441,8 +484,15 @@ def test_slice_continuity_detects_duplicates() -> None:
 
 
 def test_score_study_is_bounded_and_graded() -> None:
-    row = {"patient_id": "p1", "age": 60, "sex": "M", "institution": "A",
-           "scanner": "S", "voxel_spacing": [1.0, 1.0, 1.0], "shape": [16, 16, 16]}
+    row = {
+        "patient_id": "p1",
+        "age": 60,
+        "sex": "M",
+        "institution": "A",
+        "scanner": "S",
+        "voxel_spacing": [1.0, 1.0, 1.0],
+        "shape": [16, 16, 16],
+    }
     good = score_study(row, np.random.rand(16, 16, 16).astype(np.float32) * 100)
 
     assert 0 <= good.overall <= 100
@@ -461,13 +511,21 @@ def test_score_study_is_bounded_and_graded() -> None:
 
 
 def _cohort_frame() -> pd.DataFrame:
-    return pd.DataFrame([
-        {"patient_id": f"p{i}", "age": 20 + i * 6, "sex": "M" if i % 4 else "F",
-         "contrast": i % 3 != 0, "has_label": True,
-         "quality_score": 50 + i * 4, "institution": "Site-A" if i < 8 else "Site-B",
-         "scanner": "GE"}
-        for i in range(12)
-    ])
+    return pd.DataFrame(
+        [
+            {
+                "patient_id": f"p{i}",
+                "age": 20 + i * 6,
+                "sex": "M" if i % 4 else "F",
+                "contrast": i % 3 != 0,
+                "has_label": True,
+                "quality_score": 50 + i * 4,
+                "institution": "Site-A" if i < 8 else "Site-B",
+                "scanner": "GE",
+            }
+            for i in range(12)
+        ]
+    )
 
 
 def test_attrition_accounts_for_every_study() -> None:
@@ -495,9 +553,16 @@ def test_bad_criterion_raises_rather_than_being_skipped() -> None:
         build_cohort(_cohort_frame(), spec)
 
 
-@pytest.mark.parametrize("age, expected", [
-    (25, "<40"), (45, "40-59"), (70, "60-79"), (85, "80+"), (None, "unknown"),
-])
+@pytest.mark.parametrize(
+    "age, expected",
+    [
+        (25, "<40"),
+        (45, "40-59"),
+        (70, "60-79"),
+        (85, "80+"),
+        (None, "unknown"),
+    ],
+)
 def test_age_band(age, expected) -> None:
     assert age_band(age) == expected
 

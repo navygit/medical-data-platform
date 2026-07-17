@@ -73,14 +73,22 @@ PRESETS: dict[str, CohortSpec] = {
             "suitable for supervised liver/lesion segmentation training."
         ),
         criteria=[
-            Criterion("adult", "age >= 18",
-                      "Paediatric liver anatomy differs; a mixed cohort needs a separate model."),
-            Criterion("contrast_enhanced", "contrast == True",
-                      "Lesion conspicuity depends on contrast; mixing phases confounds the label."),
-            Criterion("has_label", "has_label == True",
-                      "Supervised training requires a mask."),
-            Criterion("quality_threshold", "quality_score >= 65",
-                      "Grade C or better; excludes corrupt and severely degraded studies."),
+            Criterion(
+                "adult",
+                "age >= 18",
+                "Paediatric liver anatomy differs; a mixed cohort needs a separate model.",
+            ),
+            Criterion(
+                "contrast_enhanced",
+                "contrast == True",
+                "Lesion conspicuity depends on contrast; mixing phases confounds the label.",
+            ),
+            Criterion("has_label", "has_label == True", "Supervised training requires a mask."),
+            Criterion(
+                "quality_threshold",
+                "quality_score >= 65",
+                "Grade C or better; excludes corrupt and severely degraded studies.",
+            ),
         ],
     ),
     "exploratory_all_liver_ct": CohortSpec(
@@ -90,16 +98,17 @@ PRESETS: dict[str, CohortSpec] = {
             "exploratory analysis and pretraining only -- not for evaluation."
         ),
         criteria=[
-            Criterion("readable", "quality_score >= 30",
-                      "Excludes only unusable studies; deliberately permissive."),
+            Criterion(
+                "readable",
+                "quality_score >= 30",
+                "Excludes only unusable studies; deliberately permissive.",
+            ),
         ],
     ),
 }
 
 
-def build_cohort(
-    frame: pd.DataFrame, spec: CohortSpec
-) -> tuple[pd.DataFrame, pd.DataFrame]:
+def build_cohort(frame: pd.DataFrame, spec: CohortSpec) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Apply a cohort spec and return the cohort plus its attrition table.
 
     Criteria are applied in order and each one's removal count is recorded. A
@@ -118,10 +127,16 @@ def build_cohort(
         ValueError: If a criterion expression cannot be evaluated.
     """
     current = frame.copy()
-    rows: list[dict[str, Any]] = [{
-        "step": 0, "criterion": "all_studies", "expression": "-",
-        "n_before": len(frame), "n_after": len(frame), "n_removed": 0,
-    }]
+    rows: list[dict[str, Any]] = [
+        {
+            "step": 0,
+            "criterion": "all_studies",
+            "expression": "-",
+            "n_before": len(frame),
+            "n_after": len(frame),
+            "n_removed": 0,
+        }
+    ]
 
     for i, criterion in enumerate(spec.criteria, start=1):
         before = len(current)
@@ -132,30 +147,52 @@ def build_cohort(
                 f"criterion {criterion.name!r} failed: {criterion.expression!r} -- {exc}"
             ) from exc
 
-        rows.append({
-            "step": i, "criterion": criterion.name, "expression": criterion.expression,
-            "n_before": before, "n_after": len(current), "n_removed": before - len(current),
-        })
-        log.info("cohort.criterion_applied", extra={
-            "cohort": spec.name, "criterion": criterion.name,
-            "n_removed": before - len(current), "n_remaining": len(current),
-        })
+        rows.append(
+            {
+                "step": i,
+                "criterion": criterion.name,
+                "expression": criterion.expression,
+                "n_before": before,
+                "n_after": len(current),
+                "n_removed": before - len(current),
+            }
+        )
+        log.info(
+            "cohort.criterion_applied",
+            extra={
+                "cohort": spec.name,
+                "criterion": criterion.name,
+                "n_removed": before - len(current),
+                "n_remaining": len(current),
+            },
+        )
 
     attrition = pd.DataFrame(rows)
     retained = len(current) / len(frame) if len(frame) else 0.0
 
-    log.info("cohort.built", extra={
-        "cohort": spec.name, "n_input": len(frame), "n_output": len(current),
-        "retention_rate": round(retained, 3),
-    })
+    log.info(
+        "cohort.built",
+        extra={
+            "cohort": spec.name,
+            "n_input": len(frame),
+            "n_output": len(current),
+            "retention_rate": round(retained, 3),
+        },
+    )
     if retained < 0.2 and len(frame):
-        log.warning("cohort.severe_attrition", extra={
-            "cohort": spec.name, "retention_rate": round(retained, 3),
-        })
+        log.warning(
+            "cohort.severe_attrition",
+            extra={
+                "cohort": spec.name,
+                "retention_rate": round(retained, 3),
+            },
+        )
     return current.reset_index(drop=True), attrition
 
 
-def compare_cohorts(cohort: pd.DataFrame, full: pd.DataFrame, columns: tuple[str, ...]) -> pd.DataFrame:
+def compare_cohorts(
+    cohort: pd.DataFrame, full: pd.DataFrame, columns: tuple[str, ...]
+) -> pd.DataFrame:
     """Compare attribute distributions between a cohort and the full archive.
 
     Selection criteria are themselves a source of bias: filtering to
@@ -175,11 +212,13 @@ def compare_cohorts(cohort: pd.DataFrame, full: pd.DataFrame, columns: tuple[str
         for value in sorted(set(full_share.index) | set(cohort_share.index), key=str):
             in_cohort = float(cohort_share.get(value, 0.0))
             in_full = float(full_share.get(value, 0.0))
-            rows.append({
-                "attribute": column,
-                "value": value,
-                "share_in_cohort": round(in_cohort, 4),
-                "share_in_full": round(in_full, 4),
-                "delta": round(in_cohort - in_full, 4),
-            })
+            rows.append(
+                {
+                    "attribute": column,
+                    "value": value,
+                    "share_in_cohort": round(in_cohort, 4),
+                    "share_in_full": round(in_full, 4),
+                    "delta": round(in_cohort - in_full, 4),
+                }
+            )
     return pd.DataFrame(rows)

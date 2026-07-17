@@ -37,19 +37,43 @@ log = get_logger(__name__)
 # deployment would use the full ~130-tag profile plus pixel-level burned-in text
 # detection -- but these are the tags that actually carry PHI in practice.
 PHI_TAGS: tuple[str, ...] = (
-    "PatientName", "PatientBirthDate", "PatientAddress", "PatientTelephoneNumbers",
-    "OtherPatientIDs", "OtherPatientNames", "ReferringPhysicianName",
-    "PerformingPhysicianName", "OperatorsName", "InstitutionAddress",
-    "AccessionNumber", "StudyDate", "StudyTime", "SeriesDate", "AcquisitionDate",
-    "ContentDate", "PatientID",
+    "PatientName",
+    "PatientBirthDate",
+    "PatientAddress",
+    "PatientTelephoneNumbers",
+    "OtherPatientIDs",
+    "OtherPatientNames",
+    "ReferringPhysicianName",
+    "PerformingPhysicianName",
+    "OperatorsName",
+    "InstitutionAddress",
+    "AccessionNumber",
+    "StudyDate",
+    "StudyTime",
+    "SeriesDate",
+    "AcquisitionDate",
+    "ContentDate",
+    "PatientID",
 )
 
 # Tags that are safe to keep and that the cohort builder needs.
 COHORT_TAGS: tuple[str, ...] = (
-    "Modality", "ViewPosition", "BodyPartExamined", "PatientSex", "PatientAge",
-    "Manufacturer", "ManufacturerModelName", "InstitutionName", "Rows", "Columns",
-    "PhotometricInterpretation", "BitsStored", "PixelSpacing",
-    "StudyInstanceUID", "SeriesInstanceUID", "SOPInstanceUID",
+    "Modality",
+    "ViewPosition",
+    "BodyPartExamined",
+    "PatientSex",
+    "PatientAge",
+    "Manufacturer",
+    "ManufacturerModelName",
+    "InstitutionName",
+    "Rows",
+    "Columns",
+    "PhotometricInterpretation",
+    "BitsStored",
+    "PixelSpacing",
+    "StudyInstanceUID",
+    "SeriesInstanceUID",
+    "SOPInstanceUID",
 )
 
 
@@ -115,8 +139,7 @@ def audit_phi(ds: Dataset) -> list[str]:
     Returns:
         Names of PHI tags that are populated. Empty means clean.
     """
-    exempt = {"PatientID", "StudyDate", "StudyTime", "SeriesDate",
-              "AcquisitionDate", "ContentDate"}
+    exempt = {"PatientID", "StudyDate", "StudyTime", "SeriesDate", "AcquisitionDate", "ContentDate"}
     flags: list[str] = []
     for tag in PHI_TAGS:
         if tag in exempt:

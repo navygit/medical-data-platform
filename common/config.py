@@ -216,6 +216,4 @@ def load_config(
 
 def dump_config(cfg: Config) -> dict[str, Any]:
     """Serialise a config to plain JSON-able types for manifest snapshotting."""
-    return yaml.safe_load(
-        yaml.safe_dump(cfg.model_dump(mode="json"), default_flow_style=False)
-    )
+    return yaml.safe_load(yaml.safe_dump(cfg.model_dump(mode="json"), default_flow_style=False))

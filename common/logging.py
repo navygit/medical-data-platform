@@ -25,10 +25,29 @@ _CONFIGURED = False
 # added by the caller and is therefore worth emitting as structured context.
 _RESERVED: frozenset[str] = frozenset(
     {
-        "args", "asctime", "created", "exc_info", "exc_text", "filename",
-        "funcName", "levelname", "levelno", "lineno", "module", "msecs",
-        "message", "msg", "name", "pathname", "process", "processName",
-        "relativeCreated", "stack_info", "thread", "threadName", "taskName",
+        "args",
+        "asctime",
+        "created",
+        "exc_info",
+        "exc_text",
+        "filename",
+        "funcName",
+        "levelname",
+        "levelno",
+        "lineno",
+        "module",
+        "msecs",
+        "message",
+        "msg",
+        "name",
+        "pathname",
+        "process",
+        "processName",
+        "relativeCreated",
+        "stack_info",
+        "thread",
+        "threadName",
+        "taskName",
     }
 )
 
@@ -62,9 +81,7 @@ class HumanFormatter(logging.Formatter):
         ts = datetime.fromtimestamp(record.created).strftime("%H:%M:%S")
         base = f"{ts} {record.levelname:<7} {record.name:<38} {record.getMessage()}"
         context = {
-            k: v
-            for k, v in record.__dict__.items()
-            if k not in _RESERVED and not k.startswith("_")
+            k: v for k, v in record.__dict__.items() if k not in _RESERVED and not k.startswith("_")
         }
         if context:
             base += "  " + " ".join(f"{k}={v}" for k, v in context.items())
@@ -116,9 +133,7 @@ class SafeExtraAdapter(logging.LoggerAdapter):
     def process(self, msg: Any, kwargs: Any) -> tuple[Any, Any]:
         extra = kwargs.get("extra")
         if extra:
-            kwargs["extra"] = {
-                (f"{k}_" if k in _RESERVED else k): v for k, v in extra.items()
-            }
+            kwargs["extra"] = {(f"{k}_" if k in _RESERVED else k): v for k, v in extra.items()}
         return msg, kwargs
 
 

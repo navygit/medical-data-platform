@@ -51,7 +51,13 @@ WEIGHTS: dict[str, float] = {
 
 # Metadata fields a study needs before it can be used for cohort selection.
 REQUIRED_METADATA: tuple[str, ...] = (
-    "patient_id", "age", "sex", "institution", "scanner", "voxel_spacing", "shape",
+    "patient_id",
+    "age",
+    "sex",
+    "institution",
+    "scanner",
+    "voxel_spacing",
+    "shape",
 )
 
 
@@ -104,7 +110,8 @@ def score_integrity(volume: np.ndarray | None) -> tuple[float, str | None]:
 def score_metadata(row: dict[str, Any]) -> tuple[float, str | None]:
     """Fraction of required metadata fields that are populated."""
     missing = [
-        field_name for field_name in REQUIRED_METADATA
+        field_name
+        for field_name in REQUIRED_METADATA
         if row.get(field_name) in (None, "", [], float("nan"))
         or (isinstance(row.get(field_name), float) and np.isnan(row[field_name]))
     ]
@@ -198,9 +205,9 @@ def score_slice_continuity(volume: np.ndarray | None, axis: int = 0) -> tuple[fl
         return 1.0, None  # nothing to check; do not penalise
 
     slices = np.moveaxis(volume, axis, 0)
-    diffs = np.array([
-        float(np.abs(slices[i + 1] - slices[i]).mean()) for i in range(len(slices) - 1)
-    ])
+    diffs = np.array(
+        [float(np.abs(slices[i + 1] - slices[i]).mean()) for i in range(len(slices) - 1)]
+    )
     if not np.isfinite(diffs).all() or diffs.mean() == 0:
         return 0.0, "identical slices throughout"
 
@@ -269,14 +276,16 @@ def score_cohort(rows: list[dict[str, Any]], volume_root: Path) -> list[QualityS
                     nib.load(str(Path(volume_root) / str(path))).dataobj, dtype=np.float32
                 )
             except Exception as exc:
-                log.warning("quality.unreadable",
-                            extra={"path": str(path), "error": str(exc)})
+                log.warning("quality.unreadable", extra={"path": str(path), "error": str(exc)})
         scores.append(score_study(row, volume))
 
     grades = [s.grade for s in scores]
-    log.info("quality.cohort_scored", extra={
-        "n_studies": len(scores),
-        "mean_score": round(float(np.mean([s.overall for s in scores])), 1) if scores else 0.0,
-        "grades": {g: grades.count(g) for g in sorted(set(grades))},
-    })
+    log.info(
+        "quality.cohort_scored",
+        extra={
+            "n_studies": len(scores),
+            "mean_score": round(float(np.mean([s.overall for s in scores])), 1) if scores else 0.0,
+            "grades": {g: grades.count(g) for g in sorted(set(grades))},
+        },
+    )
     return scores

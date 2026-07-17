@@ -202,10 +202,18 @@ def test_lits_dataset_card_contains_governance_sections(lits_cfg: Config) -> Non
     run(lits_cfg)
     card = (Path(lits_cfg.paths.outputs) / "dataset_card.md").read_text(encoding="utf-8")
 
-    for section in ("## Purpose", "## Provenance", "## Cohort definition",
-                    "### Attrition", "## Quality control", "## Bias and limitations",
-                    "## Recommended uses", "## Uses that are NOT recommended",
-                    "## Ethical considerations", "## Maintenance"):
+    for section in (
+        "## Purpose",
+        "## Provenance",
+        "## Cohort definition",
+        "### Attrition",
+        "## Quality control",
+        "## Bias and limitations",
+        "## Recommended uses",
+        "## Uses that are NOT recommended",
+        "## Ethical considerations",
+        "## Maintenance",
+    ):
         assert section in card, f"dataset card is missing {section!r}"
 
     assert "Clinical deployment" in card, "card must warn against clinical use"
@@ -263,9 +271,18 @@ def test_all_releases_share_one_manifest_schema(
     run_lits(lits_cfg)
 
     required = {
-        "dataset", "version", "schema_version", "created_at", "dataset_hash",
-        "n_files", "n_subjects", "files", "splits", "config_snapshot",
-        "lineage", "environment",
+        "dataset",
+        "version",
+        "schema_version",
+        "created_at",
+        "dataset_hash",
+        "n_files",
+        "n_subjects",
+        "files",
+        "splits",
+        "config_snapshot",
+        "lineage",
+        "environment",
     }
     for cfg in (brats_cfg, mimic_cfg, lits_cfg):
         manifest = Path(cfg.paths.releases) / "v1.0.0" / "manifest.json"

@@ -149,8 +149,7 @@ def plot_distribution(
     if data.size:
         ax.hist(data, bins=bins, color="#4C78A8", edgecolor="white")
         median = float(np.median(data))
-        ax.axvline(median, color="#C0392B", linestyle="--",
-                   label=f"median = {median:.2f}")
+        ax.axvline(median, color="#C0392B", linestyle="--", label=f"median = {median:.2f}")
         ax.legend()
     else:
         ax.text(0.5, 0.5, "no data", ha="center", va="center", transform=ax.transAxes)

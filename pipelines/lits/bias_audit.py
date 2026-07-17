@@ -43,7 +43,10 @@ REFERENCE: dict[str, dict[str, float]] = {
 }
 
 AGE_BANDS: tuple[tuple[str, float, float], ...] = (
-    ("<40", 0, 40), ("40-59", 40, 60), ("60-79", 60, 80), ("80+", 80, 200),
+    ("<40", 0, 40),
+    ("40-59", 40, 60),
+    ("60-79", 60, 80),
+    ("80+", 80, 200),
 )
 
 # A subgroup holding >50% of a cohort dominates what the model learns.
@@ -160,10 +163,14 @@ def audit_representation(
         message = f"{top_category} dominates {column} at {top_share:.0%} of the cohort"
 
     return BiasFinding(
-        attribute=column, kind="representation", severity=severity, message=message,
+        attribute=column,
+        kind="representation",
+        severity=severity,
+        message=message,
         statistic=float(statistic) if statistic is not None else None,
         p_value=float(p_value) if p_value is not None else None,
-        effect_size=effect, distribution=counts.to_dict(),
+        effect_size=effect,
+        distribution=counts.to_dict(),
     )
 
 
@@ -189,8 +196,9 @@ def audit_outcome_disparity(
     ]
     groups = [g for g in groups if len(g) >= 2]
     if len(groups) < 2:
-        return BiasFinding(group_column, "disparity", "INFO",
-                           f"too few groups with data for {outcome_column}")
+        return BiasFinding(
+            group_column, "disparity", "INFO", f"too few groups with data for {outcome_column}"
+        )
 
     medians = [float(np.median(g)) for g in groups]
     lo, hi = min(medians), max(medians)
@@ -217,7 +225,10 @@ def audit_outcome_disparity(
         )
 
     return BiasFinding(
-        attribute=group_column, kind="disparity", severity=severity, message=message,
+        attribute=group_column,
+        kind="disparity",
+        severity=severity,
+        message=message,
         statistic=float(statistic) if statistic is not None else None,
         p_value=float(p_value) if p_value is not None else None,
         effect_size=float(ratio) if np.isfinite(ratio) else None,
@@ -250,9 +261,13 @@ def audit_cohort(frame: pd.DataFrame, outcome_columns: tuple[str, ...] = ()) -> 
                 findings.append(audit_outcome_disparity(frame, group, outcome))
 
     n_warn = sum(f.severity == "WARN" for f in findings)
-    log.info("bias.audit_complete", extra={
-        "n_findings": len(findings), "n_warnings": n_warn,
-    })
+    log.info(
+        "bias.audit_complete",
+        extra={
+            "n_findings": len(findings),
+            "n_warnings": n_warn,
+        },
+    )
     return findings
 
 
@@ -271,10 +286,14 @@ def plot_bias_figures(frame: pd.DataFrame, out_dir: Path) -> list[Path]:
         ("scanner", "Studies per scanner"),
     ):
         if column in frame and frame[column].notna().any():
-            written.append(plot_categorical(
-                frame[column].fillna("unknown").value_counts().to_dict(),
-                out_dir / f"bias_{column}.png", title, column,
-            ))
+            written.append(
+                plot_categorical(
+                    frame[column].fillna("unknown").value_counts().to_dict(),
+                    out_dir / f"bias_{column}.png",
+                    title,
+                    column,
+                )
+            )
 
     for column, title, xlabel in (
         ("age", "Age distribution", "age (years)"),
@@ -283,9 +302,14 @@ def plot_bias_figures(frame: pd.DataFrame, out_dir: Path) -> list[Path]:
         ("slice_thickness_mm", "Slice thickness distribution", "mm"),
     ):
         if column in frame and frame[column].notna().any():
-            written.append(plot_distribution(
-                frame[column].dropna().tolist(), out_dir / f"dist_{column}.png", title, xlabel,
-            ))
+            written.append(
+                plot_distribution(
+                    frame[column].dropna().tolist(),
+                    out_dir / f"dist_{column}.png",
+                    title,
+                    xlabel,
+                )
+            )
 
     log.info("bias.figures", extra={"n_figures": len(written)})
     return written

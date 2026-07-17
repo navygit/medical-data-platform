@@ -81,8 +81,9 @@ def stage_ingest(cfg: Config) -> pd.DataFrame:
                 record["shape"] = [int(s) for s in img.shape]
                 record["slice_thickness_mm"] = max(spacing)
             except Exception as exc:
-                log.warning("lits.header_unreadable",
-                            extra={"path": str(volume_path), "error": str(exc)})
+                log.warning(
+                    "lits.header_unreadable", extra={"path": str(volume_path), "error": str(exc)}
+                )
 
         if label_path.exists() and record["voxel_spacing"]:
             try:
@@ -91,17 +92,21 @@ def stage_ingest(cfg: Config) -> pd.DataFrame:
                     np.count_nonzero(mask == 2) * np.prod(record["voxel_spacing"])
                 )
             except Exception as exc:
-                log.warning("lits.label_unreadable",
-                            extra={"path": str(label_path), "error": str(exc)})
+                log.warning(
+                    "lits.label_unreadable", extra={"path": str(label_path), "error": str(exc)}
+                )
 
         rows.append(record)
 
     out = pd.DataFrame(rows)
-    log.info("lits.ingested", extra={
-        "n_studies": len(out),
-        "n_with_label": int(out["has_label"].sum()),
-        "n_unreadable": int(out["voxel_spacing"].isna().sum()),
-    })
+    log.info(
+        "lits.ingested",
+        extra={
+            "n_studies": len(out),
+            "n_with_label": int(out["has_label"].sum()),
+            "n_unreadable": int(out["voxel_spacing"].isna().sum()),
+        },
+    )
     return out
 
 
@@ -115,11 +120,14 @@ def stage_quality(cfg: Config, frame: pd.DataFrame) -> pd.DataFrame:
     out.mkdir(parents=True, exist_ok=True)
     quality.to_csv(out / "quality_scores.csv", index=False)
 
-    log.info("lits.quality_summary", extra={
-        "mean": round(float(quality["quality_score"].mean()), 1),
-        "min": round(float(quality["quality_score"].min()), 1),
-        "grades": quality["grade"].value_counts().to_dict(),
-    })
+    log.info(
+        "lits.quality_summary",
+        extra={
+            "mean": round(float(quality["quality_score"].mean()), 1),
+            "min": round(float(quality["quality_score"].min()), 1),
+            "grades": quality["grade"].value_counts().to_dict(),
+        },
+    )
     return merged
 
 
@@ -138,7 +146,9 @@ def stage_cohort(cfg: Config, frame: pd.DataFrame) -> tuple[pd.DataFrame, pd.Dat
     return cohort, attrition, spec
 
 
-def stage_bias(cfg: Config, cohort: pd.DataFrame, full: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+def stage_bias(
+    cfg: Config, cohort: pd.DataFrame, full: pd.DataFrame
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Audit the cohort and compare it against the full archive."""
     findings = audit_cohort(cohort, outcome_columns=("quality_score", "tumor_volume_mm3"))
     frame = findings_to_frame(findings)
@@ -152,8 +162,9 @@ def stage_bias(cfg: Config, cohort: pd.DataFrame, full: pd.DataFrame) -> tuple[p
 
     warnings = frame[frame["severity"] == "WARN"] if not frame.empty else pd.DataFrame()
     for _, row in warnings.iterrows():
-        log.warning("bias.finding", extra={"attribute": row["attribute"],
-                                           "message": row["message"]})
+        log.warning(
+            "bias.finding", extra={"attribute": row["attribute"], "message": row["message"]}
+        )
     return frame, shift
 
 
@@ -171,8 +182,8 @@ def stage_splits(cfg: Config, cohort: pd.DataFrame) -> dict[str, list[str]]:
 
     splits = {
         "train": sorted(subjects[:n_train]),
-        "val": sorted(subjects[n_train:n_train + n_val]),
-        "test": sorted(subjects[n_train + n_val:]),
+        "val": sorted(subjects[n_train : n_train + n_val]),
+        "test": sorted(subjects[n_train + n_val :]),
     }
     log.info("lits.splits", extra={k: len(v) for k, v in splits.items()})
     return splits
@@ -187,29 +198,39 @@ def _records(cohort: pd.DataFrame, splits: dict[str, list[str]]) -> list[ScanRec
         spacing = row.get("voxel_spacing")
         if isinstance(spacing, str):
             spacing = None
-        records.append(ScanRecord(
-            patient_id=str(row["patient_id"]),
-            modality="ct",
-            filepath=str(row["volume_path"]),
-            shape=list(row["shape"]) if isinstance(row.get("shape"), list) else [],
-            voxel_spacing=list(spacing) if isinstance(spacing, list) else [],
-            mask_available=bool(row.get("has_label")),
-            mask_path=str(row.get("label_path")) if row.get("has_label") else None,
-            tumor_volume_mm3=row.get("tumor_volume_mm3")
-            if pd.notna(row.get("tumor_volume_mm3")) else None,
-            scanner=str(row.get("scanner")) if pd.notna(row.get("scanner")) else None,
-            institution=str(row.get("institution")) if pd.notna(row.get("institution")) else None,
-            age=float(row["age"]) if pd.notna(row.get("age")) else None,
-            sex=str(row.get("sex")) if pd.notna(row.get("sex")) else None,
-            sha256=str(row.get("sha256")) if pd.notna(row.get("sha256")) else None,
-            file_size_bytes=int(row["file_size_bytes"])
-            if pd.notna(row.get("file_size_bytes")) else None,
-            quality_score=float(row["quality_score"]) if pd.notna(row.get("quality_score")) else None,
-            qc_status="pass",
-            label_classes=[1, 2] if row.get("has_label") else [],
-            extra={"split": lookup.get(str(row["patient_id"]), "unassigned"),
-                   "grade": str(row.get("grade", ""))},
-        ))
+        records.append(
+            ScanRecord(
+                patient_id=str(row["patient_id"]),
+                modality="ct",
+                filepath=str(row["volume_path"]),
+                shape=list(row["shape"]) if isinstance(row.get("shape"), list) else [],
+                voxel_spacing=list(spacing) if isinstance(spacing, list) else [],
+                mask_available=bool(row.get("has_label")),
+                mask_path=str(row.get("label_path")) if row.get("has_label") else None,
+                tumor_volume_mm3=(
+                    row.get("tumor_volume_mm3") if pd.notna(row.get("tumor_volume_mm3")) else None
+                ),
+                scanner=str(row.get("scanner")) if pd.notna(row.get("scanner")) else None,
+                institution=(
+                    str(row.get("institution")) if pd.notna(row.get("institution")) else None
+                ),
+                age=float(row["age"]) if pd.notna(row.get("age")) else None,
+                sex=str(row.get("sex")) if pd.notna(row.get("sex")) else None,
+                sha256=str(row.get("sha256")) if pd.notna(row.get("sha256")) else None,
+                file_size_bytes=(
+                    int(row["file_size_bytes"]) if pd.notna(row.get("file_size_bytes")) else None
+                ),
+                quality_score=(
+                    float(row["quality_score"]) if pd.notna(row.get("quality_score")) else None
+                ),
+                qc_status="pass",
+                label_classes=[1, 2] if row.get("has_label") else [],
+                extra={
+                    "split": lookup.get(str(row["patient_id"]), "unassigned"),
+                    "grade": str(row.get("grade", "")),
+                },
+            )
+        )
     return records
 
 
@@ -232,12 +253,17 @@ def run(cfg: Config) -> dict:
 
     version = str(cfg.extra.get("dataset_version", "v1.0.0"))
     release = create_release(
-        dataset="lits", version=version, records=records, cfg=cfg, splits=splits,
+        dataset="lits",
+        version=version,
+        records=records,
+        cfg=cfg,
+        splits=splits,
         qc_summary={
             "mean_quality_score": round(float(cohort["quality_score"].mean()), 2),
             "n_below_threshold": int((cohort["quality_score"] < 65).sum()),
-            "bias_warnings": bias[bias["severity"] == "WARN"]["message"].tolist()
-            if not bias.empty else [],
+            "bias_warnings": (
+                bias[bias["severity"] == "WARN"]["message"].tolist() if not bias.empty else []
+            ),
         },
         lineage=[
             node("ingest", "Joined clinical metadata to NIfTI headers.", root=str(cfg.paths.raw)),
@@ -293,8 +319,7 @@ def run(cfg: Config) -> dict:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run the LiTS governance pipeline.")
     parser.add_argument("--config", type=Path, default=Path("configs/lits.yaml"))
-    parser.add_argument("--set", dest="overrides", action="append", default=[],
-                        metavar="KEY=VALUE")
+    parser.add_argument("--set", dest="overrides", action="append", default=[], metavar="KEY=VALUE")
     args = parser.parse_args(argv)
 
     cfg = load_config(args.config, overrides=args.overrides)

@@ -149,14 +149,14 @@ def scan_subject(subject_dir: Path, raw_root: Path) -> list[ScanRecord]:
             series_uid=f"{subject}_{modality}",
             modality=modality,
             filepath=relative_to(path, raw_root),
-            shape=probe["shape"],                      # type: ignore[arg-type]
-            voxel_spacing=probe["voxel_spacing"],      # type: ignore[arg-type]
-            orientation=probe["orientation"],          # type: ignore[arg-type]
-            affine=probe["affine"],                    # type: ignore[arg-type]
-            intensity_min=probe["intensity_min"],      # type: ignore[arg-type]
-            intensity_max=probe["intensity_max"],      # type: ignore[arg-type]
-            intensity_mean=probe["intensity_mean"],    # type: ignore[arg-type]
-            intensity_std=probe["intensity_std"],      # type: ignore[arg-type]
+            shape=probe["shape"],  # type: ignore[arg-type]
+            voxel_spacing=probe["voxel_spacing"],  # type: ignore[arg-type]
+            orientation=probe["orientation"],  # type: ignore[arg-type]
+            affine=probe["affine"],  # type: ignore[arg-type]
+            intensity_min=probe["intensity_min"],  # type: ignore[arg-type]
+            intensity_max=probe["intensity_max"],  # type: ignore[arg-type]
+            intensity_mean=probe["intensity_mean"],  # type: ignore[arg-type]
+            intensity_std=probe["intensity_std"],  # type: ignore[arg-type]
             mask_available=mask_path is not None,
             mask_path=relative_to(mask_path, raw_root) if mask_path else None,
             file_size_bytes=file_size(path),
@@ -207,10 +207,13 @@ def ingest(cfg: Config) -> list[ScanRecord]:
         records.extend(scan_subject(subject_dir, raw_root))
 
     n_unreadable = sum(1 for r in records if r.intensity_mean is None)
-    log.info("ingest.complete", extra={
-        "n_subjects": len(subject_dirs),
-        "n_series": len(records),
-        "n_unreadable": n_unreadable,
-        "total_bytes": sum(r.file_size_bytes or 0 for r in records),
-    })
+    log.info(
+        "ingest.complete",
+        extra={
+            "n_subjects": len(subject_dirs),
+            "n_series": len(records),
+            "n_unreadable": n_unreadable,
+            "total_bytes": sum(r.file_size_bytes or 0 for r in records),
+        },
+    )
     return records

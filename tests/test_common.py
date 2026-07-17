@@ -29,36 +29,63 @@ from common.versioning import (
 
 
 def test_load_config_merges_base_and_override(tmp_path: Path) -> None:
-    (tmp_path / "base.yaml").write_text(yaml.safe_dump({
-        "name": "base", "seed": 1,
-        "paths": {"raw": "a", "interim": "b", "processed": "c",
-                  "outputs": "d", "releases": "e"},
-        "qc": {"min_tumor_voxels": 10, "max_spacing_mm": 5.0},
-    }))
-    (tmp_path / "child.yaml").write_text(yaml.safe_dump({
-        "name": "child", "qc": {"min_tumor_voxels": 99},
-    }))
+    (tmp_path / "base.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "name": "base",
+                "seed": 1,
+                "paths": {
+                    "raw": "a",
+                    "interim": "b",
+                    "processed": "c",
+                    "outputs": "d",
+                    "releases": "e",
+                },
+                "qc": {"min_tumor_voxels": 10, "max_spacing_mm": 5.0},
+            }
+        )
+    )
+    (tmp_path / "child.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "name": "child",
+                "qc": {"min_tumor_voxels": 99},
+            }
+        )
+    )
 
     cfg = load_config(tmp_path / "child.yaml")
 
-    assert cfg.name == "child"          # child overrides base
-    assert cfg.seed == 1                # inherited from base
+    assert cfg.name == "child"  # child overrides base
+    assert cfg.seed == 1  # inherited from base
     assert cfg.qc.min_tumor_voxels == 99
     assert cfg.qc.max_spacing_mm == 5.0  # nested merge preserves sibling keys
 
 
 def test_cli_overrides_are_type_coerced(tmp_path: Path) -> None:
-    (tmp_path / "c.yaml").write_text(yaml.safe_dump({
-        "name": "x",
-        "paths": {"raw": "a", "interim": "b", "processed": "c",
-                  "outputs": "d", "releases": "e"},
-    }))
+    (tmp_path / "c.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "name": "x",
+                "paths": {
+                    "raw": "a",
+                    "interim": "b",
+                    "processed": "c",
+                    "outputs": "d",
+                    "releases": "e",
+                },
+            }
+        )
+    )
 
-    cfg = load_config(tmp_path / "c.yaml", overrides=[
-        "qc.min_tumor_voxels=50",
-        "json_logs=true",
-        "preprocess.target_spacing=[2.0, 2.0, 2.0]",
-    ])
+    cfg = load_config(
+        tmp_path / "c.yaml",
+        overrides=[
+            "qc.min_tumor_voxels=50",
+            "json_logs=true",
+            "preprocess.target_spacing=[2.0, 2.0, 2.0]",
+        ],
+    )
 
     assert cfg.qc.min_tumor_voxels == 50 and isinstance(cfg.qc.min_tumor_voxels, int)
     assert cfg.json_logs is True
@@ -66,23 +93,41 @@ def test_cli_overrides_are_type_coerced(tmp_path: Path) -> None:
 
 
 def test_split_ratios_must_sum_to_one(tmp_path: Path) -> None:
-    (tmp_path / "c.yaml").write_text(yaml.safe_dump({
-        "name": "x",
-        "paths": {"raw": "a", "interim": "b", "processed": "c",
-                  "outputs": "d", "releases": "e"},
-        "split": {"train": 0.6, "val": 0.3, "test": 0.3},  # sums to 1.2
-    }))
+    (tmp_path / "c.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "name": "x",
+                "paths": {
+                    "raw": "a",
+                    "interim": "b",
+                    "processed": "c",
+                    "outputs": "d",
+                    "releases": "e",
+                },
+                "split": {"train": 0.6, "val": 0.3, "test": 0.3},  # sums to 1.2
+            }
+        )
+    )
     with pytest.raises(ValidationError, match=r"sum to 1\.0"):
         load_config(tmp_path / "c.yaml")
 
 
 def test_invalid_orientation_rejected(tmp_path: Path) -> None:
-    (tmp_path / "c.yaml").write_text(yaml.safe_dump({
-        "name": "x",
-        "paths": {"raw": "a", "interim": "b", "processed": "c",
-                  "outputs": "d", "releases": "e"},
-        "qc": {"expected_orientation": "XYZ"},
-    }))
+    (tmp_path / "c.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "name": "x",
+                "paths": {
+                    "raw": "a",
+                    "interim": "b",
+                    "processed": "c",
+                    "outputs": "d",
+                    "releases": "e",
+                },
+                "qc": {"expected_orientation": "XYZ"},
+            }
+        )
+    )
     with pytest.raises(ValidationError):
         load_config(tmp_path / "c.yaml")
 
@@ -93,11 +138,20 @@ def test_missing_config_raises(tmp_path: Path) -> None:
 
 
 def test_malformed_override_raises(tmp_path: Path) -> None:
-    (tmp_path / "c.yaml").write_text(yaml.safe_dump({
-        "name": "x",
-        "paths": {"raw": "a", "interim": "b", "processed": "c",
-                  "outputs": "d", "releases": "e"},
-    }))
+    (tmp_path / "c.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "name": "x",
+                "paths": {
+                    "raw": "a",
+                    "interim": "b",
+                    "processed": "c",
+                    "outputs": "d",
+                    "releases": "e",
+                },
+            }
+        )
+    )
     with pytest.raises(ValueError, match=r"key\.path=value"):
         load_config(tmp_path / "c.yaml", overrides=["no_equals_sign"])
 
@@ -134,7 +188,9 @@ def test_voxel_volume_handles_missing_spacing() -> None:
     assert rec.voxel_volume_mm3 == pytest.approx(8.0)
 
 
-def test_manifest_roundtrips_through_every_format(tmp_path: Path, sample_record: ScanRecord) -> None:
+def test_manifest_roundtrips_through_every_format(
+    tmp_path: Path, sample_record: ScanRecord
+) -> None:
     paths = write_manifest([sample_record], tmp_path / "m")
 
     for fmt in ("parquet", "csv", "json"):
@@ -194,7 +250,7 @@ def test_relative_to_outside_root_falls_back(tmp_path: Path) -> None:
 def test_human_size() -> None:
     assert human_size(512) == "512.0 B"
     assert human_size(1536) == "1.5 KB"
-    assert human_size(1024 ** 3) == "1.0 GB"
+    assert human_size(1024**3) == "1.0 GB"
 
 
 # --------------------------------------------------------------------------- #
@@ -219,17 +275,23 @@ def test_unhashed_records_are_excluded(sample_record: ScanRecord) -> None:
 
 
 def test_release_is_immutable(tmp_path: Path, brats_cfg: Config, sample_record: ScanRecord) -> None:
-    release = create_release("brats", "v1.0.0", [sample_record], brats_cfg,
-                             splits={"train": ["subj-001"]})
+    release = create_release(
+        "brats", "v1.0.0", [sample_record], brats_cfg, splits={"train": ["subj-001"]}
+    )
     write_release(release, tmp_path)
 
     with pytest.raises(FileExistsError, match="immutable"):
         write_release(release, tmp_path)
 
 
-def test_release_roundtrip_and_index(tmp_path: Path, brats_cfg: Config, sample_record: ScanRecord) -> None:
+def test_release_roundtrip_and_index(
+    tmp_path: Path, brats_cfg: Config, sample_record: ScanRecord
+) -> None:
     release = create_release(
-        "brats", "v1.0.0", [sample_record], brats_cfg,
+        "brats",
+        "v1.0.0",
+        [sample_record],
+        brats_cfg,
         splits={"train": ["subj-001"]},
         lineage=[node("ingest", "scanned", root="x")],
         qc_summary={"n_errors": 0},
@@ -253,8 +315,13 @@ def test_verify_release_detects_tampering(tmp_path: Path, brats_cfg: Config) -> 
     target = data_root / "scan.nii.gz"
     target.write_bytes(b"original content")
 
-    rec = ScanRecord(patient_id="p1", modality="t1", filepath="scan.nii.gz",
-                     sha256=sha256_file(target), file_size_bytes=target.stat().st_size)
+    rec = ScanRecord(
+        patient_id="p1",
+        modality="t1",
+        filepath="scan.nii.gz",
+        sha256=sha256_file(target),
+        file_size_bytes=target.stat().st_size,
+    )
     release = create_release("brats", "v1.0.0", [rec], brats_cfg)
 
     assert verify_release(release, data_root) == []

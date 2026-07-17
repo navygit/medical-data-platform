@@ -102,14 +102,17 @@ def build_fusion_table(
         n_reports_without_image=len(report_studies - image_studies),
     )
 
-    log.info("fusion.joined", extra={
-        "n_images": stats.n_images,
-        "n_reports": stats.n_reports,
-        "n_joined": stats.n_joined,
-        "join_rate": round(stats.join_rate, 3),
-        "orphan_images": stats.n_images_without_report,
-        "orphan_reports": stats.n_reports_without_image,
-    })
+    log.info(
+        "fusion.joined",
+        extra={
+            "n_images": stats.n_images,
+            "n_reports": stats.n_reports,
+            "n_joined": stats.n_joined,
+            "join_rate": round(stats.join_rate, 3),
+            "orphan_images": stats.n_images_without_report,
+            "orphan_reports": stats.n_reports_without_image,
+        },
+    )
     if stats.join_rate < 0.95 and stats.n_images:
         log.warning("fusion.low_join_rate", extra={"join_rate": round(stats.join_rate, 3)})
     return table, stats
@@ -149,7 +152,9 @@ def binarise_labels(
     return out, list(findings)
 
 
-def label_prevalence(table: pd.DataFrame, findings: tuple[str, ...] = TARGET_FINDINGS) -> pd.DataFrame:
+def label_prevalence(
+    table: pd.DataFrame, findings: tuple[str, ...] = TARGET_FINDINGS
+) -> pd.DataFrame:
     """Per-finding counts of positive/negative/uncertain/not-mentioned.
 
     Goes straight into the dataset card: class imbalance is the first thing a
@@ -160,14 +165,16 @@ def label_prevalence(table: pd.DataFrame, findings: tuple[str, ...] = TARGET_FIN
         column = table[f"label_{finding}"]
         n = len(column)
         n_pos = int((column == 1).sum())
-        rows.append({
-            "finding": finding,
-            "positive": n_pos,
-            "negative": int((column == 0).sum()),
-            "uncertain": int((column == -1).sum()),
-            "not_mentioned": int(column.isna().sum()),
-            "prevalence": round(n_pos / n, 4) if n else 0.0,
-        })
+        rows.append(
+            {
+                "finding": finding,
+                "positive": n_pos,
+                "negative": int((column == 0).sum()),
+                "uncertain": int((column == -1).sum()),
+                "not_mentioned": int(column.isna().sum()),
+                "prevalence": round(n_pos / n, 4) if n else 0.0,
+            }
+        )
     return pd.DataFrame(rows)
 
 
@@ -192,10 +199,13 @@ def build_patient_timeline(table: pd.DataFrame) -> pd.DataFrame:
     columns += [f"label_{f}" for f in TARGET_FINDINGS if f"label_{f}" in frame]
     timeline = frame[columns].reset_index(drop=True)
 
-    log.info("fusion.timeline", extra={
-        "n_subjects": int(timeline["subject_id"].nunique()),
-        "max_studies_per_subject": int(timeline["n_studies"].max()),
-    })
+    log.info(
+        "fusion.timeline",
+        extra={
+            "n_subjects": int(timeline["subject_id"].nunique()),
+            "max_studies_per_subject": int(timeline["n_studies"].max()),
+        },
+    )
     return timeline
 
 
@@ -224,8 +234,8 @@ def split_by_subject(
 
     assignment = {
         **dict.fromkeys(subjects[:n_train], "train"),
-        **dict.fromkeys(subjects[n_train:n_train + n_val], "val"),
-        **dict.fromkeys(subjects[n_train + n_val:], "test"),
+        **dict.fromkeys(subjects[n_train : n_train + n_val], "val"),
+        **dict.fromkeys(subjects[n_train + n_val :], "test"),
     }
     out = table.assign(split=table["subject_id"].map(assignment))
 
@@ -235,14 +245,19 @@ def split_by_subject(
             f"subject leakage across splits: {overlaps[overlaps > 1].index.tolist()}"
         )
 
-    log.info("fusion.split", extra={
-        "n_subjects": n,
-        **out["split"].value_counts().to_dict(),
-    })
+    log.info(
+        "fusion.split",
+        extra={
+            "n_subjects": n,
+            **out["split"].value_counts().to_dict(),
+        },
+    )
     return out
 
 
-def write_fusion_dataset(table: pd.DataFrame, timeline: pd.DataFrame, out_dir: Path) -> dict[str, Path]:
+def write_fusion_dataset(
+    table: pd.DataFrame, timeline: pd.DataFrame, out_dir: Path
+) -> dict[str, Path]:
     """Persist the fusion table, timeline and structured reports.
 
     ``structured_reports.csv`` is the artifact the case-study plan calls for: the
@@ -263,10 +278,10 @@ def write_fusion_dataset(table: pd.DataFrame, timeline: pd.DataFrame, out_dir: P
     timeline.to_csv(paths["timeline"], index=False)
 
     report_columns = [
-        c for c in table.columns
+        c
+        for c in table.columns
         if c.startswith(("label_", "severity_"))
-        or c in ("study_id", "subject_id", "impression", "n_recommendations",
-                 "max_measurement_cm")
+        or c in ("study_id", "subject_id", "impression", "n_recommendations", "max_measurement_cm")
     ]
     table[report_columns].to_csv(paths["structured_reports"], index=False)
 

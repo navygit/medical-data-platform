@@ -48,21 +48,36 @@ log = get_logger(__name__)
 # review and extend the vocabulary without reading the algorithm.
 FINDING_VOCAB: dict[str, list[str]] = {
     "pneumonia": [
-        "pneumonia", "infectious process", "airspace opacity", "airspace disease",
-        "consolidation", "infiltrate",
+        "pneumonia",
+        "infectious process",
+        "airspace opacity",
+        "airspace disease",
+        "consolidation",
+        "infiltrate",
     ],
     "edema": [
-        "edema", "pulmonary edema", "vascular congestion", "kerley", "interstitial edema",
+        "edema",
+        "pulmonary edema",
+        "vascular congestion",
+        "kerley",
+        "interstitial edema",
     ],
     "cardiomegaly": [
-        "cardiomegaly", "enlarged cardiac silhouette", "enlargement of the cardiac silhouette",
-        "cardiac enlargement", "enlarged heart",
+        "cardiomegaly",
+        "enlarged cardiac silhouette",
+        "enlargement of the cardiac silhouette",
+        "cardiac enlargement",
+        "enlarged heart",
     ],
     "pleural_effusion": [
-        "pleural effusion", "effusion", "pleural fluid",
+        "pleural effusion",
+        "effusion",
+        "pleural fluid",
     ],
     "atelectasis": [
-        "atelectasis", "atelectatic", "volume loss",
+        "atelectasis",
+        "atelectatic",
+        "volume loss",
     ],
     "pneumothorax": [
         "pneumothorax",
@@ -70,33 +85,83 @@ FINDING_VOCAB: dict[str, list[str]] = {
 }
 
 NEGATION_TRIGGERS: tuple[str, ...] = (
-    "no evidence of", "no evidence for", "without evidence of", "no signs of",
-    "no findings of", "free of", "resolved", "clear of", "rules out",
-    "ruled out", "negative for", "absence of", "without", "no ", "not ",
+    "no evidence of",
+    "no evidence for",
+    "without evidence of",
+    "no signs of",
+    "no findings of",
+    "free of",
+    "resolved",
+    "clear of",
+    "rules out",
+    "ruled out",
+    "negative for",
+    "absence of",
+    "without",
+    "no ",
+    "not ",
 )
 
 UNCERTAIN_TRIGGERS: tuple[str, ...] = (
-    "possible", "possibly", "may represent", "cannot be excluded", "can not be excluded",
-    "cannot exclude", "suspicious for", "questionable", "concerning for", "suggestive of",
-    "compatible with", "consistent with", "likely", "probable", "differential",
-    "worrisome for", "versus", "vs.",
+    "possible",
+    "possibly",
+    "may represent",
+    "cannot be excluded",
+    "can not be excluded",
+    "cannot exclude",
+    "suspicious for",
+    "questionable",
+    "concerning for",
+    "suggestive of",
+    "compatible with",
+    "consistent with",
+    "likely",
+    "probable",
+    "differential",
+    "worrisome for",
+    "versus",
+    "vs.",
 )
 
 # Phrases that end a negation's scope: "no effusion, but consolidation is present"
 TERMINATION: tuple[str, ...] = (
-    "but", "however", "although", "though", "otherwise", "except", "aside from",
-    "which", "yet",
+    "but",
+    "however",
+    "although",
+    "though",
+    "otherwise",
+    "except",
+    "aside from",
+    "which",
+    "yet",
 )
 
 SEVERITY_TERMS: dict[str, int] = {
-    "trace": 1, "minimal": 1, "tiny": 1, "small": 2, "mild": 2, "slight": 2,
-    "moderate": 3, "substantial": 4, "large": 4, "severe": 4, "extensive": 4,
-    "massive": 5, "marked": 4,
+    "trace": 1,
+    "minimal": 1,
+    "tiny": 1,
+    "small": 2,
+    "mild": 2,
+    "slight": 2,
+    "moderate": 3,
+    "substantial": 4,
+    "large": 4,
+    "severe": 4,
+    "extensive": 4,
+    "massive": 5,
+    "marked": 4,
 }
 
 RECOMMENDATION_CUES: tuple[str, ...] = (
-    "recommend", "suggest", "advise", "consider", "follow-up", "follow up",
-    "correlate", "further evaluation", "attention",
+    "recommend",
+    "suggest",
+    "advise",
+    "consider",
+    "follow-up",
+    "follow up",
+    "correlate",
+    "further evaluation",
+    "attention",
 )
 
 # Section headers as they appear in MIMIC-CXR reports.
@@ -275,11 +340,13 @@ def parse_report(text: str, study_id: str = "") -> ParsedReport:
     training on it teaches the model to read the clinician's suspicion.
     """
     sections = split_sections(text)
-    label_source = " ".join([
-        sections.get("findings", ""),
-        sections.get("impression", ""),
-        sections.get("conclusion", ""),
-    ]).strip() or sections.get("preamble", text)
+    label_source = " ".join(
+        [
+            sections.get("findings", ""),
+            sections.get("impression", ""),
+            sections.get("conclusion", ""),
+        ]
+    ).strip() or sections.get("preamble", text)
 
     labels, severity = extract_labels(label_source)
 

@@ -17,12 +17,15 @@ repos:
       - id: check-added-large-files
         args: ["--maxkb=512"]
 
+  # Ruff lints; Black formats. Deliberately NOT running ruff-format as well --
+  # two formatters with different opinions fight over the same files and each
+  # commit flips them back and forth. CI enforces `black --check`, so Black is
+  # the single source of truth for formatting.
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.4.4
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
-      - id: ruff-format
 
   - repo: https://github.com/psf/black
     rev: 24.4.2

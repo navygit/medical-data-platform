@@ -49,9 +49,9 @@ CHANNELS: tuple[str, ...] = ("t1", "t1ce", "t2", "flair")
 # BraTS nested regions. Each is a union of raw labels, and they overlap by
 # design: ET is inside TC is inside WT.
 REGIONS: dict[str, tuple[int, ...]] = {
-    "TC": (1, 4),      # tumour core: necrotic + enhancing
-    "WT": (1, 2, 4),   # whole tumour: everything
-    "ET": (4,),        # enhancing tumour
+    "TC": (1, 4),  # tumour core: necrotic + enhancing
+    "WT": (1, 2, 4),  # whole tumour: everything
+    "ET": (4,),  # enhancing tumour
 }
 
 
@@ -77,9 +77,7 @@ def to_regions(mask: np.ndarray) -> np.ndarray:
     Returns:
         Float32 array of shape ``(3, *mask.shape)`` ordered (TC, WT, ET).
     """
-    return np.stack(
-        [np.isin(mask, labels).astype(np.float32) for labels in REGIONS.values()]
-    )
+    return np.stack([np.isin(mask, labels).astype(np.float32) for labels in REGIONS.values()])
 
 
 class BratsDataset:
@@ -112,8 +110,7 @@ class BratsDataset:
 
         self.subjects: list[str] = sorted(frame["patient_id"].unique().tolist())
         self._paths = {
-            (row["patient_id"], row["modality"]): row["filepath"]
-            for _, row in frame.iterrows()
+            (row["patient_id"], row["modality"]): row["filepath"] for _, row in frame.iterrows()
         }
         self._masks = {
             row["patient_id"]: row["mask_path"]
@@ -121,9 +118,13 @@ class BratsDataset:
             if row.get("mask_path")
         }
 
-        log.info("dataset.loaded", extra={
-            "split": split, "n_subjects": len(self.subjects),
-        })
+        log.info(
+            "dataset.loaded",
+            extra={
+                "split": split,
+                "n_subjects": len(self.subjects),
+            },
+        )
 
     def __len__(self) -> int:
         return len(self.subjects)
@@ -173,7 +174,8 @@ class BratsDataset:
         mask_path = self._masks.get(subject)
         raw_mask = (
             np.asanyarray(nib.load(str(self.root / mask_path)).dataobj)
-            if mask_path else np.zeros(image.shape[1:], dtype=np.uint8)
+            if mask_path
+            else np.zeros(image.shape[1:], dtype=np.uint8)
         )
         target = to_regions(raw_mask)
 
@@ -240,10 +242,16 @@ def train(cfg: Config) -> dict[str, Any]:
     if len(train_ds) == 0:
         raise RuntimeError("training split is empty; check the pipeline output")
 
-    train_dl = DataLoader(train_ds, batch_size=cfg.train.batch_size, shuffle=True,
-                          num_workers=cfg.train.num_workers, collate_fn=_collate)
-    val_dl = DataLoader(val_ds, batch_size=1, shuffle=False,
-                        num_workers=cfg.train.num_workers, collate_fn=_collate)
+    train_dl = DataLoader(
+        train_ds,
+        batch_size=cfg.train.batch_size,
+        shuffle=True,
+        num_workers=cfg.train.num_workers,
+        collate_fn=_collate,
+    )
+    val_dl = DataLoader(
+        val_ds, batch_size=1, shuffle=False, num_workers=cfg.train.num_workers, collate_fn=_collate
+    )
 
     model = build_model().to(device)
     # sigmoid, not softmax: the three regions are nested and overlap.
@@ -285,8 +293,10 @@ def train(cfg: Config) -> dict[str, Any]:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     checkpoint = out_dir / "model_unet3d.pt"
-    torch.save({"state_dict": model.state_dict(),
-                "channels": CHANNELS, "regions": list(REGIONS)}, checkpoint)
+    torch.save(
+        {"state_dict": model.state_dict(), "channels": CHANNELS, "regions": list(REGIONS)},
+        checkpoint,
+    )
     (out_dir / "training_metrics.json").write_text(json.dumps(history, indent=2), encoding="utf-8")
 
     if tracker:
@@ -315,13 +325,15 @@ class _MlflowRun:
         mlflow.set_tracking_uri(cfg.train.mlflow_uri)
         mlflow.set_experiment(cfg.train.experiment)
         mlflow.start_run()
-        mlflow.log_params({
-            "epochs": cfg.train.epochs,
-            "batch_size": cfg.train.batch_size,
-            "lr": cfg.train.lr,
-            "roi_size": str(cfg.train.roi_size),
-            "dataset_version": cfg.extra.get("dataset_version"),
-        })
+        mlflow.log_params(
+            {
+                "epochs": cfg.train.epochs,
+                "batch_size": cfg.train.batch_size,
+                "lr": cfg.train.lr,
+                "roi_size": str(cfg.train.roi_size),
+                "dataset_version": cfg.extra.get("dataset_version"),
+            }
+        )
 
     def log_metrics(self, metrics: dict[str, float], step: int) -> None:
         self._mlflow.log_metrics(metrics, step=step)
@@ -344,8 +356,7 @@ def _mlflow_run(cfg: Config) -> _MlflowRun | None:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Train the BraTS 3D U-Net baseline.")
     parser.add_argument("--config", type=Path, default=Path("configs/brats.yaml"))
-    parser.add_argument("--set", dest="overrides", action="append", default=[],
-                        metavar="KEY=VALUE")
+    parser.add_argument("--set", dest="overrides", action="append", default=[], metavar="KEY=VALUE")
     args = parser.parse_args(argv)
 
     cfg = load_config(args.config, overrides=args.overrides)

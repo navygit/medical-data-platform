@@ -92,15 +92,15 @@ def stage_parse_reports(cfg: Config) -> dict:
     if not reports_root.exists():
         raise FileNotFoundError(f"MIMIC report root not found: {reports_root}")
 
-    reports = {
-        path.stem: parse_report_file(path)
-        for path in sorted(reports_root.glob("*.txt"))
-    }
+    reports = {path.stem: parse_report_file(path) for path in sorted(reports_root.glob("*.txt"))}
     n_positive = sum(1 for r in reports.values() if r.positive_findings)
-    log.info("mimic.reports_parsed", extra={
-        "n_reports": len(reports),
-        "n_with_positive_finding": n_positive,
-    })
+    log.info(
+        "mimic.reports_parsed",
+        extra={
+            "n_reports": len(reports),
+            "n_with_positive_finding": n_positive,
+        },
+    )
     return reports
 
 
@@ -113,9 +113,14 @@ def stage_filter_views(cfg: Config, records: list[DicomRecord]) -> list[DicomRec
     kept = [r for r in records if (r.view_position or "").upper() in allowed]
     dropped = len(records) - len(kept)
     if dropped:
-        log.info("mimic.views_filtered", extra={
-            "allowed": sorted(allowed), "n_kept": len(kept), "n_dropped": dropped,
-        })
+        log.info(
+            "mimic.views_filtered",
+            extra={
+                "allowed": sorted(allowed),
+                "n_kept": len(kept),
+                "n_dropped": dropped,
+            },
+        )
     return kept
 
 
@@ -126,7 +131,9 @@ def stage_figures(cfg: Config, table: pd.DataFrame, prevalence: pd.DataFrame) ->
 
     plot_categorical(
         {r["finding"]: int(r["positive"]) for _, r in prevalence.iterrows()},
-        figures / "label_prevalence.png", "Positive label counts", "finding",
+        figures / "label_prevalence.png",
+        "Positive label counts",
+        "finding",
     )
     n += 1
 
@@ -138,14 +145,18 @@ def stage_figures(cfg: Config, table: pd.DataFrame, prevalence: pd.DataFrame) ->
         if column in table and table[column].notna().any():
             plot_categorical(
                 table[column].value_counts().to_dict(),
-                figures / f"{column}_counts.png", title, column,
+                figures / f"{column}_counts.png",
+                title,
+                column,
             )
             n += 1
 
     if "age" in table and table["age"].notna().any():
         plot_distribution(
-            table["age"].dropna().tolist(), figures / "age_distribution.png",
-            "Age distribution", "age (years)",
+            table["age"].dropna().tolist(),
+            figures / "age_distribution.png",
+            "Age distribution",
+            "age (years)",
         )
         n += 1
 
@@ -170,19 +181,21 @@ def _release_from_table(cfg: Config, table: pd.DataFrame, qc_summary: dict) -> R
             series_uid=str(row.get("series_uid") or row["study_id"]),
             modality=str(row.get("modality") or "dx"),
             filepath=str(row["filepath"]),
-            shape=[int(row["rows"]), int(row["columns"])]
-            if pd.notna(row.get("rows")) and pd.notna(row.get("columns")) else [],
+            shape=(
+                [int(row["rows"]), int(row["columns"])]
+                if pd.notna(row.get("rows")) and pd.notna(row.get("columns"))
+                else []
+            ),
             sha256=str(row["sha256"]) if pd.notna(row.get("sha256")) else None,
-            file_size_bytes=int(row["file_size_bytes"])
-            if pd.notna(row.get("file_size_bytes")) else None,
+            file_size_bytes=(
+                int(row["file_size_bytes"]) if pd.notna(row.get("file_size_bytes")) else None
+            ),
             institution=str(row["institution"]) if pd.notna(row.get("institution")) else None,
             scanner=str(row["manufacturer"]) if pd.notna(row.get("manufacturer")) else None,
             age=float(row["age"]) if pd.notna(row.get("age")) else None,
             sex=str(row["sex"]) if pd.notna(row.get("sex")) else None,
             mask_available=False,
-            label_classes=[
-                i for i, f in enumerate(TARGET_FINDINGS) if row.get(f"label_{f}") == 1
-            ],
+            label_classes=[i for i, f in enumerate(TARGET_FINDINGS) if row.get(f"label_{f}") == 1],
             qc_status="pass",
             extra={"split": str(row.get("split", "unassigned"))},
         )
@@ -202,14 +215,26 @@ def _release_from_table(cfg: Config, table: pd.DataFrame, qc_summary: dict) -> R
         splits=splits,
         qc_summary=qc_summary,
         lineage=[
-            node("scan_images", "Read DICOM headers without decoding pixels.",
-                 root=str(cfg.paths.raw)),
-            node("phi_audit", "Re-verified de-identification across PHI tag set.",
-                 result=qc_summary.get("phi", {})),
-            node("parse_reports", "Rule-based section/negation/severity extraction.",
-                 findings=list(TARGET_FINDINGS)),
-            node("fusion", "Joined images to reports on study_id.",
-                 join_rate=qc_summary.get("join_rate")),
+            node(
+                "scan_images",
+                "Read DICOM headers without decoding pixels.",
+                root=str(cfg.paths.raw),
+            ),
+            node(
+                "phi_audit",
+                "Re-verified de-identification across PHI tag set.",
+                result=qc_summary.get("phi", {}),
+            ),
+            node(
+                "parse_reports",
+                "Rule-based section/negation/severity extraction.",
+                findings=list(TARGET_FINDINGS),
+            ),
+            node(
+                "fusion",
+                "Joined images to reports on study_id.",
+                join_rate=qc_summary.get("join_rate"),
+            ),
             node("split", "Subject-grouped partition.", **cfg.split.model_dump(mode="json")),
         ],
     )
@@ -228,9 +253,7 @@ def run(cfg: Config) -> dict:
         log.error("mimic.empty_join")
         return {"error": "no image/report pairs found"}
 
-    table = split_by_subject(
-        table, train=cfg.split.train, val=cfg.split.val, seed=cfg.split.seed
-    )
+    table = split_by_subject(table, train=cfg.split.train, val=cfg.split.val, seed=cfg.split.seed)
     prevalence = label_prevalence(table)
     timeline = build_patient_timeline(table)
 
@@ -253,9 +276,9 @@ def run(cfg: Config) -> dict:
 
     release_path: str | None
     try:
-        release_path = str(write_release(
-            _release_from_table(cfg, table, qc_summary), Path(cfg.paths.releases)
-        ))
+        release_path = str(
+            write_release(_release_from_table(cfg, table, qc_summary), Path(cfg.paths.releases))
+        )
     except FileExistsError:
         log.warning("release.exists_skipping")
         release_path = "skipped (version exists)"
@@ -276,8 +299,7 @@ def run(cfg: Config) -> dict:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run the MIMIC-CXR multimodal pipeline.")
     parser.add_argument("--config", type=Path, default=Path("configs/mimic.yaml"))
-    parser.add_argument("--set", dest="overrides", action="append", default=[],
-                        metavar="KEY=VALUE")
+    parser.add_argument("--set", dest="overrides", action="append", default=[], metavar="KEY=VALUE")
     args = parser.parse_args(argv)
 
     cfg = load_config(args.config, overrides=args.overrides)

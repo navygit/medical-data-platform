@@ -84,8 +84,9 @@ def test_detects_wrong_orientation_as_warning(brats_findings) -> None:
 def test_detects_coarse_spacing_as_warning(brats_findings) -> None:
     _, findings = brats_findings
     subject = _subject(DEFECT_PLAN["coarse_spacing"])
-    assert any(f.check == "spacing" and f.patient_id == subject and f.severity == "WARN"
-               for f in findings)
+    assert any(
+        f.check == "spacing" and f.patient_id == subject and f.severity == "WARN" for f in findings
+    )
 
 
 def test_duplicate_policy_keeps_canonical_rejects_copy(brats_findings) -> None:
@@ -113,7 +114,9 @@ def test_clean_subjects_survive_qc(brats_findings) -> None:
 # --------------------------------------------------------------------------- #
 
 
-def test_good_record_produces_no_errors(brats_cfg: Config, sample_record: ScanRecord, tmp_path: Path) -> None:
+def test_good_record_produces_no_errors(
+    brats_cfg: Config, sample_record: ScanRecord, tmp_path: Path
+) -> None:
     """A well-formed record on disk must be clean."""
     # Point raw at a private dir: the synth corpus is session-scoped and shared,
     # so writing into it would leak fixture state into other tests.
@@ -122,9 +125,18 @@ def test_good_record_produces_no_errors(brats_cfg: Config, sample_record: ScanRe
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_bytes(b"not empty")
 
-    findings = run_checks([sample_record], brats_cfg,
-                          only=["file_readable", "corrupt_volume", "empty_volume",
-                                "dimensions", "orientation", "spacing"])
+    findings = run_checks(
+        [sample_record],
+        brats_cfg,
+        only=[
+            "file_readable",
+            "corrupt_volume",
+            "empty_volume",
+            "dimensions",
+            "orientation",
+            "spacing",
+        ],
+    )
     assert [f for f in findings if f.severity == "ERROR"] == []
 
 
@@ -156,7 +168,9 @@ def test_resolve_path_prefers_raw_then_falls_back_to_processed(
     assert resolve_path(sample_record, brats_cfg) == in_raw
 
 
-def test_a_raising_check_becomes_a_finding_not_a_crash(brats_cfg: Config, sample_record: ScanRecord) -> None:
+def test_a_raising_check_becomes_a_finding_not_a_crash(
+    brats_cfg: Config, sample_record: ScanRecord
+) -> None:
     """One malformed study must not abort QC of the rest."""
     from common.qc import _REGISTRY
 
@@ -185,8 +199,7 @@ def test_empty_mask_threshold_is_configurable(brats_cfg: Config, sample_record: 
 
 def test_missing_modalities_respects_config(brats_cfg: Config) -> None:
     records = [
-        ScanRecord(patient_id="p1", modality=m, filepath=f"p1_{m}.nii.gz")
-        for m in ("t1", "t2")
+        ScanRecord(patient_id="p1", modality=m, filepath=f"p1_{m}.nii.gz") for m in ("t1", "t2")
     ]
     brats_cfg.qc.expected_modalities = ["t1", "t1ce", "t2", "flair"]
     findings = check_missing_modalities(records, brats_cfg)
@@ -252,8 +265,14 @@ def test_empty_report_renders_pass_state(tmp_path: Path, sample_record: ScanReco
 
 def test_findings_frame_has_stable_columns() -> None:
     frame = findings_to_frame([])
-    assert list(frame.columns) == ["patient_id", "modality", "check", "severity",
-                                   "message", "filepath"]
+    assert list(frame.columns) == [
+        "patient_id",
+        "modality",
+        "check",
+        "severity",
+        "message",
+        "filepath",
+    ]
 
 
 def test_registry_is_populated() -> None:

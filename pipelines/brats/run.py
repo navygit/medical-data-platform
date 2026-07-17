@@ -71,12 +71,15 @@ def stage_qc(cfg: Config, records: list[ScanRecord]) -> tuple[list[ScanRecord], 
     write_html_report(report, findings, outputs / "QC_REPORT.html", name=cfg.name)
     write_manifest(records, outputs / "metadata" / "manifest_qc")
 
-    log.info("qc.summary", extra={
-        "n_errors": report.n_errors,
-        "n_warnings": report.n_warnings,
-        "pass_rate": round(report.pass_rate, 3),
-        "failed_subjects": report.failed_subjects,
-    })
+    log.info(
+        "qc.summary",
+        extra={
+            "n_errors": report.n_errors,
+            "n_warnings": report.n_warnings,
+            "pass_rate": round(report.pass_rate, 3),
+            "failed_subjects": report.failed_subjects,
+        },
+    )
 
     if cfg.qc.fail_on == "error" and report.n_errors and not _passing(records):
         raise RuntimeError("QC rejected every subject; refusing to continue")
@@ -120,11 +123,14 @@ def require_complete_subjects(records: list[ScanRecord], cfg: Config) -> list[Sc
     complete = {s for s, mods in have.items() if required <= mods}
     dropped = sorted(set(have) - complete)
     if dropped:
-        log.warning("pipeline.incomplete_subjects_dropped", extra={
-            "n_dropped": len(dropped),
-            "subjects": dropped,
-            "required": sorted(required),
-        })
+        log.warning(
+            "pipeline.incomplete_subjects_dropped",
+            extra={
+                "n_dropped": len(dropped),
+                "subjects": dropped,
+                "required": sorted(required),
+            },
+        )
     return [r for r in records if r.patient_id in complete]
 
 
@@ -171,27 +177,39 @@ def stage_visualise(cfg: Config, records: list[ScanRecord], n: int = 3) -> list[
         try:
             volume = np.asanyarray(nib.load(str(processed_root / rec.filepath)).dataobj)
             mask = np.asanyarray(nib.load(str(processed_root / rec.mask_path)).dataobj)
-            written.append(plot_slice_grid(
-                volume, mask,
-                figures_dir / f"{rec.patient_id}_overlay.png",
-                title=f"{rec.patient_id} ({rec.modality.upper()})",
-            ))
+            written.append(
+                plot_slice_grid(
+                    volume,
+                    mask,
+                    figures_dir / f"{rec.patient_id}_overlay.png",
+                    title=f"{rec.patient_id} ({rec.modality.upper()})",
+                )
+            )
         except Exception as exc:
             log.warning("viz.failed", extra={"patient": rec.patient_id, "error": str(exc)})
 
     volumes = [r.tumor_volume_mm3 for r in records if r.tumor_volume_mm3]
     if volumes:
-        written.append(plot_distribution(
-            volumes, figures_dir / "tumor_volume_distribution.png",
-            "Tumour burden across cohort", "tumour volume (mm3)",
-        ))
+        written.append(
+            plot_distribution(
+                volumes,
+                figures_dir / "tumor_volume_distribution.png",
+                "Tumour burden across cohort",
+                "tumour volume (mm3)",
+            )
+        )
 
     counts: dict[str, int] = {}
     for rec in records:
         counts[rec.modality] = counts.get(rec.modality, 0) + 1
-    written.append(plot_categorical(
-        counts, figures_dir / "modality_counts.png", "Series per modality", "modality",
-    ))
+    written.append(
+        plot_categorical(
+            counts,
+            figures_dir / "modality_counts.png",
+            "Series per modality",
+            "modality",
+        )
+    )
 
     log.info("viz.complete", extra={"n_figures": len(written)})
     return written
@@ -207,19 +225,37 @@ def stage_release(
     """
     version = str(cfg.extra.get("dataset_version", "v1.0.0"))
     lineage = [
-        node("ingest", "Scanned raw BraTS tree; hashed and probed every series.",
-             raw_root=str(cfg.paths.raw)),
-        node("qc", "Ran per-series and cohort QC checks.",
-             checks=registered_checks(), thresholds=cfg.qc.model_dump(mode="json")),
-        node("preprocess", "Reoriented to RAS, resampled to isotropic spacing, z-scored.",
-             **cfg.preprocess.model_dump(mode="json")),
-        node("split", "Patient-grouped, tumour-burden-stratified partition.",
-             **cfg.split.model_dump(mode="json")),
+        node(
+            "ingest",
+            "Scanned raw BraTS tree; hashed and probed every series.",
+            raw_root=str(cfg.paths.raw),
+        ),
+        node(
+            "qc",
+            "Ran per-series and cohort QC checks.",
+            checks=registered_checks(),
+            thresholds=cfg.qc.model_dump(mode="json"),
+        ),
+        node(
+            "preprocess",
+            "Reoriented to RAS, resampled to isotropic spacing, z-scored.",
+            **cfg.preprocess.model_dump(mode="json"),
+        ),
+        node(
+            "split",
+            "Patient-grouped, tumour-burden-stratified partition.",
+            **cfg.split.model_dump(mode="json"),
+        ),
     ]
 
     release = create_release(
-        dataset="brats", version=version, records=records, cfg=cfg,
-        splits=splits, lineage=lineage, qc_summary=qc_summary,
+        dataset="brats",
+        version=version,
+        records=records,
+        cfg=cfg,
+        splits=splits,
+        lineage=lineage,
+        qc_summary=qc_summary,
     )
     try:
         return write_release(release, Path(cfg.paths.releases))
@@ -277,10 +313,17 @@ def run(cfg: Config, stage: str = "all") -> dict:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run the BraTS data pipeline.")
     parser.add_argument("--config", type=Path, default=Path("configs/brats.yaml"))
-    parser.add_argument("--set", dest="overrides", action="append", default=[],
-                        metavar="KEY=VALUE", help="dotted config override; repeatable")
-    parser.add_argument("--stage", default="all",
-                        choices=["ingest", "qc", "preprocess", "split", "all"])
+    parser.add_argument(
+        "--set",
+        dest="overrides",
+        action="append",
+        default=[],
+        metavar="KEY=VALUE",
+        help="dotted config override; repeatable",
+    )
+    parser.add_argument(
+        "--stage", default="all", choices=["ingest", "qc", "preprocess", "split", "all"]
+    )
     args = parser.parse_args(argv)
 
     cfg = load_config(args.config, overrides=args.overrides)
