@@ -9,7 +9,7 @@ description = "Production-style data platform for 3D medical multimodal datasets
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
-authors = [{ name = "Navin Kumar" }]
+authors = [{ name = "Naveen Kumar Aranganathan" }]
 keywords = ["medical-imaging", "dicom", "nifti", "data-engineering", "mlops", "data-governance"]
 classifiers = [
     "Programming Language :: Python :: 3.11",

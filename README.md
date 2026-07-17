@@ -394,7 +394,7 @@ Optional: `torch` · `MONAI` · `MLflow` · `Prefect` · `DVC` · `Hydra` · `Po
 
 ## Contact
 
-**Navin Kumar** — [LinkedIn](https://www.linkedin.com/in/navin91/) · [GitHub](https://github.com/navygit)
+**Naveen Kumar Aranganathan** — [LinkedIn](https://www.linkedin.com/in/navin91/) · [GitHub](https://github.com/navygit)
 
 Built as a demonstration of end-to-end medical imaging data operations: ingestion, quality control, governance, versioning and lineage. Questions about the design decisions are welcome — open an [issue](https://github.com/navygit/medical-data-platform/issues).
 
