@@ -1,0 +1,140 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONUNBUFFERED: "1"
+  MPLBACKEND: Agg
+
+jobs:
+  quality:
+    name: Lint and type-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install
+        run: pip install -e ".[dev]"
+
+      - name: Ruff
+        run: ruff check common pipelines scripts tests
+
+      - name: Black
+        run: black --check common pipelines scripts tests
+
+      - name: Mypy
+        run: mypy common pipelines
+        continue-on-error: true  # advisory while type coverage is being completed
+
+  test:
+    name: Tests (py${{ matrix.python-version }} / ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Windows is in the matrix on purpose: medical data is routinely curated
+        # on Windows workstations, and path handling is where that bites.
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install
+        run: pip install -e ".[dev]"
+
+      - name: Test
+        run: pytest tests/ -v --cov=common --cov=pipelines --cov-report=xml --cov-report=term
+
+      - name: Upload coverage
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.xml
+
+  pipelines:
+    name: End-to-end pipeline run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install
+        run: pip install -e .
+
+      # The core promise of the repo: a clean clone reaches a full artifact set
+      # with no credentialed download and no GPU. CI proves it on every push.
+      - name: Generate synthetic corpus
+        run: python scripts/generate_synthetic_data.py --dataset all --n 12 --size 32
+
+      - name: BraTS pipeline
+        run: python -m pipelines.brats.run --config configs/brats.yaml
+
+      - name: MIMIC-CXR pipeline
+        run: python -m pipelines.mimic.run --config configs/mimic.yaml
+
+      - name: LiTS governance pipeline
+        run: python -m pipelines.lits.run --config configs/lits.yaml
+
+      - name: Assert artifacts exist
+        run: |
+          set -e
+          for f in outputs/brats/QC_REPORT.html \
+                   outputs/lits/dataset_card.md \
+                   outputs/mimic/PHI_AUDIT.csv \
+                   releases/brats/v1.0.0/manifest.json \
+                   releases/lits/v1.0.0/manifest.json; do
+            test -f "$f" || { echo "MISSING: $f"; exit 1; }
+            echo "ok: $f"
+          done
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline-artifacts
+          path: |
+            outputs/
+            releases/
+          retention-days: 14
+
+  docker:
+    name: Docker build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: medical-data-platform:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

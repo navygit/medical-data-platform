@@ -1,0 +1,40 @@
+# Install once with: pre-commit install
+# Run over everything with: pre-commit run --all-files
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-case-conflict          # Windows/Linux filename collisions
+      - id: detect-private-key
+      # Data must never enter git history. Even synthetic -- the habit is what
+      # matters, and history is effectively permanent.
+      - id: check-added-large-files
+        args: ["--maxkb=512"]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.4.4
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
+
+  - repo: https://github.com/psf/black
+    rev: 24.4.2
+    hooks:
+      - id: black
+
+  - repo: local
+    hooks:
+      # Blocks medical image formats at commit time regardless of .gitignore.
+      # A .gitignore is a default; this is a gate.
+      - id: no-medical-data
+        name: Block medical image files from commits
+        entry: Medical image files must not be committed. They are reproducible via scripts/generate_synthetic_data.py.
+        language: fail
+        files: '\.(nii|nii\.gz|dcm|dicom|mha|nrrd)$'
