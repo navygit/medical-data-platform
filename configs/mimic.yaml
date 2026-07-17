@@ -1,0 +1,47 @@
+# Case study 2 -- MIMIC-CXR multimodal (image + report) pipeline.
+#
+# Cohort schema: frontal chest radiographs (PA/AP) with a paired free-text
+# radiology report. Lateral views are excluded by default: they have different
+# anatomy-to-pixel mapping and mixing them without a view-aware model is a
+# known source of degraded performance.
+name: mimic
+seed: 42
+
+paths:
+  raw: data/raw/mimic
+  interim: data/interim/mimic
+  processed: data/processed/mimic
+  outputs: outputs/mimic
+  releases: releases/mimic
+
+qc:
+  expected_modalities: [dx]
+  expected_orientation: RAS   # unused for 2D radiographs; kept for schema parity
+  min_shape: [64, 64]
+  fail_on: warn
+
+preprocess:
+  intensity_norm: minmax      # radiographs are already windowed by the modality
+  target_spacing: [1.0, 1.0, 1.0]
+
+split:
+  train: 0.7
+  val: 0.15
+  test: 0.15
+  seed: 42
+  group_by: subject_id        # a patient has many studies over years
+
+train:
+  epochs: 2
+  batch_size: 8
+  lr: 0.0001
+  experiment: mimic-fusion
+
+extra:
+  dataset_version: v1.0.0
+  target_findings: [pneumonia, edema, cardiomegaly, pleural_effusion]
+  uncertain_policy: zeros     # CheXpert U-Zeros; see fusion_dataset.binarise_labels
+  allowed_views: [PA, AP]
+  image_size: 224
+  text_model: emilyalsentzer/Bio_ClinicalBERT
+  image_model: densenet121
